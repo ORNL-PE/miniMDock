@@ -1,0 +1,182 @@
+#
+# miniAD HIP Makefile
+# ------------------------------------------------------
+# Note that environment variables must be defined
+# before compiling
+# DEVICE?
+# if DEVICE=CPU: CPU_INCLUDE_PATH?, CPU_LIBRARY_PATH?
+# if DEVICE=GPU: GPU_INCLUDE_PATH?, GPU_LIBRARY_PATH?
+
+# ------------------------------------------------------
+# Choose OpenCL device
+# Valid values: CPU, GPU
+
+HIP_PATH?=$(wildcard /opt/rocm-3.3.0/hip)
+#HIP_PLATFORM=$(shell $(HIP_PATH)/bin/hipconfig --platform)
+HIPCC=$(HIP_PATH)/bin/hipcc
+CPP = g++
+UNAME := $(shell uname)
+
+TARGET = hcc
+#CUDA_TARGETS=$(foreach target,$(TARGETS),-gencode arch=compute_$(target),code=sm_$(target))
+#HIP_TARGETS=$(foreach target,$(TARGETS),-gencode arch=compute_$(target),code=sm_$(target))
+
+$(shell ./link_hip.sh)
+
+ifeq ($(DEVICE), CPU)
+	DEV =-DCPU_DEVICE
+else ifeq ($(DEVICE), GPU)
+	DEV =-DGPU_DEVICE
+endif
+
+# ------------------------------------------------------
+# Project directories
+COMMON_DIR=./common
+HOST_INC_DIR=./host/inc
+HOST_SRC_DIR=./host/src
+KRNL_DIR=./device/hip
+KCMN_DIR=$(COMMON_DIR)
+BIN_DIR=./bin
+#LIB_HIP = -lhip_hcc kernels.o 
+LIB_HIP = -lamdhip64 kernels.o 
+
+
+# Host sources
+HOST_SRC=$(wildcard $(HOST_SRC_DIR)/*.cpp)
+SRC=$(HOST_SRC)
+
+CXXFLAGS= $(hipconfig -C)
+IFLAGS=-I$(COMMON_DIR) -I$(HOST_INC_DIR) -I$(GPU_INCLUDE_PATH) -I$(HIP_PATH) -D__HIP_PLATFORM_HCC__  -I$(KRNL_DIR)
+LFLAGS=-L$(GPU_LIBRARY_PATH) -Wl,-rpath=$(GPU_LIBRARY_PATH):$(CPU_LIBRARY_PATH)
+CFLAGS=-std=c++11 $(IFLAGS) $(LFLAGS)
+
+TARGET := autodock_hip
+ifeq ($(DEVICE), CPU)
+	TARGET:=$(TARGET)_cpu
+else ifeq ($(DEVICE), GPU)
+	NWI=-DN64WI
+	TARGET:=$(TARGET)_gpu
+endif
+
+BIN := $(wildcard $(TARGET)*)
+
+# ------------------------------------------------------
+# Number of work-items (wi)
+# Valid values: 32, 64, 128, 256
+NUMWI=
+
+ifeq ($(NUMWI), 32)
+	NWI=-DN32WI
+	TARGET:=$(TARGET)_32wi
+else ifeq ($(NUMWI), 64)
+	NWI=-DN64WI
+	TARGET:=$(TARGET)_64wi
+else ifeq ($(NUMWI), 128)
+	NWI=-DN128WI
+	TARGET:=$(TARGET)_128wi
+else ifeq ($(NUMWI), 256)
+		NWI=-DN256WI
+		TARGET:=$(TARGET)_256wi
+else
+	ifeq ($(DEVICE), CPU)
+		NWI=-DN16WI
+		TARGET:=$(TARGET)_16wi
+	else ifeq ($(DEVICE), GPU)
+		NWI=-DN64WI
+		TARGET:=$(TARGET)_64wi
+	endif
+endif
+
+# ------------------------------------------------------
+# Configuration
+# FDEBUG (full) : enables debugging on both host + device
+# LDEBUG (light): enables debugging on host
+# RELEASE
+CONFIG=RELEASE
+#CONFIG=FDEBUG
+
+
+ifeq ($(CONFIG),FDEBUG)
+	OPT =-O0 -g3 -Wall -DDOCK_DEBUG
+	HIP_FLAGS = -c -fno-gpu-rdc -DHIP_FAST_MATH   $(HIP_TARGETS) -std=c++11
+else ifeq ($(CONFIG),LDEBUG)
+	OPT =-O0 -g3 -Wall 
+	HIP_FLAGS = -c -fno-gpu-rdc -DHIP_FAST_MATH  $(HIP_TARGETS) -std=c++11
+else ifeq ($(CONFIG),RELEASE)
+	OPT =-O3
+	HIP_FLAGS = $(CXXFLAGS) -c  -DHIP_FAST_MATH  $(HIP_TARGETS) -std=c++11
+else
+	OPT =
+	HIP_FLAGS = -c -fno-gpu-rdc -DHIP_FAST_MATH  $(HIP_TARGETS) -std=c++11
+endif
+HIP_INCLUDES=
+
+all: odock
+
+check-env-dev:
+	@if test -z "$$DEVICE"; then \
+		echo "DEVICE is undefined"; \
+		exit 1; \
+	else \
+		if [ "$$DEVICE" = "CPU" ]; then \
+			echo "DEVICE is set to $$DEVICE"; \
+		else \
+			if [ "$$DEVICE" = "GPU" ]; then \
+				echo "DEVICE is set to $$DEVICE"; \
+			else \
+				echo "DEVICE value is invalid. Set DEVICE to either CPU or GPU"; \
+			fi; \
+		fi; \
+	fi; \
+	echo " "
+
+check-env-cpu:
+	@if test -z "$$CPU_INCLUDE_PATH"; then \
+		echo "CPU_INCLUDE_PATH is undefined"; \
+	else \
+		echo "CPU_INCLUDE_PATH is set to $$CPU_INCLUDE_PATH"; \
+	fi; \
+	if test -z "$$CPU_LIBRARY_PATH"; then \
+		echo "CPU_LIBRARY_PATH is undefined"; \
+	else \
+		echo "CPU_LIBRARY_PATH is set to $$CPU_LIBRARY_PATH"; \
+	fi; \
+	echo " "
+
+check-env-gpu:
+	@if test -z "$$GPU_INCLUDE_PATH"; then \
+		echo "GPU_INCLUDE_PATH is undefined"; \
+	else \
+		echo "GPU_INCLUDE_PATH is set to $$GPU_INCLUDE_PATH"; \
+	fi; \
+	if test -z "$$GPU_LIBRARY_PATH"; then \
+		echo "GPU_LIBRARY_PATH is undefined"; \
+	else \
+		echo "GPU_LIBRARY_PATH is set to $$GPU_LIBRARY_PATH"; \
+	fi; \
+	echo " "
+
+check-env-all: check-env-dev check-env-cpu check-env-gpu
+
+# ------------------------------------------------------
+# Priting out its git version hash
+
+GIT_VERSION := $(shell git describe --abbrev=40 --dirty --always --tags)
+
+CFLAGS+=-DVERSION=\"$(GIT_VERSION)\"
+
+# ------------------------------------------------------
+
+kernels: $(KERNEL_SRC)
+	$(HIPCC) $(NWI) $(HIP_FLAGS) $(IFLAGS) $(HIP_INCLUDES) -c $(KRNL_DIR)/kernels.cpp
+
+odock: check-env-all kernels $(SRC)
+	$(CPP) \
+	$(SRC) \
+	$(CFLAGS) \
+	$(LIB_HIP) \
+	-o$(BIN_DIR)/$(TARGET) \
+	$(DEV) $(NWI) $(OPT) $(DD) $(KFLAGS)
+
+clean:
+	rm -f $(BIN_DIR)/* initpop.txt $(HOST_INC_DIR)/performdocking.h $(HOST_SRC_DIR)/performdocking.cpp

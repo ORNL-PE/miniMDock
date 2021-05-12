@@ -1,0 +1,201 @@
+#
+# miniAD Kokkos Makefile
+# ------------------------------------------------------
+# Note that environment variables must be defined
+# before compiling
+# DEVICE?
+# KOKKOS_SRC_DIR? KOKKOS_INC_PATH?, KOKKOS_LIB_PATH?
+
+UNAME := $(shell uname)
+
+KOKKOS_SRC_DIR ?=/usr/local/kokkos
+KOKKOS_INC_PATH ?=/usr/local/kokkos/install/include/
+KOKKOS_LIB_PATH ?=/usr/local/kokkos/install/lib/
+#LIB_KOKKOS= -lkokkos 
+LIB_KOKKOS= -lkokkoscore -ldl   #For updated kokkos 
+
+$(shell ./link_kokkos.sh)
+
+ifeq ($(CARD), AMD)
+  ifeq ($(OMPTARGET), ON)
+#  CPP = $(HIP_PATH)/bin/hipcc -fopenmp -std=c++17
+  CPP = CC -g -Ofast -fopenmp -std=c++17
+  else
+  CPP = $(HIP_PATH)/bin/hipcc -std=c++14
+  endif
+else
+  ifeq ($(OMPTARGET), ON)
+    CPP = clang++ -std=c++17 -fopenmp -lomptarget 
+  else
+    export NVCC_WRAPPER_DEFAULT_COMPILER=mpiCC
+    CPP = $(KOKKOS_SRC_DIR)/bin/nvcc_wrapper -mp -std=c++11 --expt-extended-lambda -arch=sm_70
+    #CPP = $(KOKKOS_SRC_DIR)/bin/nvcc_wrapper -std=c++14 --expt-extended-lambda -arch=sm_70  #Without openmp 
+  endif
+endif
+
+# ------------------------------------------------------
+# Project directories
+COMMON_DIR=./common
+HOST_INC_DIR=./host/inc
+HOST_SRC_DIR=./host/src
+KRNL_DIR=./framework/kokkos
+BIN_DIR=./bin
+
+# Host sources
+SRC=$(wildcard $(HOST_SRC_DIR)/*.cpp)
+
+IFLAGS= -I$(HOST_INC_DIR) -I$(KOKKOS_INC_PATH) -I$(KRNL_DIR)
+#IFLAGS=-I$(COMMON_DIR) -I$(HOST_INC_DIR) -I$(KOKKOS_INC_PATH) -I$(KRNL_DIR)
+LFLAGS=-L$(KOKKOS_LIB_PATH) $(LIB_KOKKOS)
+CFLAGS=$(IFLAGS) $(LFLAGS)
+
+KOKKOS_OPTS=-DUSE_KOKKOS
+TARGET := autodock_kokkos
+
+ifeq ($(OMPTARGET), ON)
+        KOKKOS_OPTS+=-DUSE_OMPTARGET
+        TARGET:=$(TARGET)_omptarget
+endif
+
+ifeq ($(CARD), AMD)
+        CD=-DCARD_AMD
+        TARGET:=$(TARGET)_amd
+else
+        TARGET:=$(TARGET)_nv
+endif
+
+ifeq ($(DEVICE), CPU)
+	KOKKOS_OPTS+=-DUSE_OMP
+	TARGET:=$(TARGET)_cpu
+else ifeq ($(DEVICE), SERIAL) # Single thread on CPU
+	KOKKOS_OPTS=
+	TARGET:=$(TARGET)_serial
+else ifeq ($(DEVICE), GPU)
+	KOKKOS_OPTS+=-DUSE_GPU
+	TARGET:=$(TARGET)_gpu
+endif
+
+
+ifeq ($(OVERLAP), ON)
+	ifeq ($(DEVICE), GPU)
+		KOKKOS_OPTS+=-DUSE_OMP
+	endif
+endif
+
+# Set number of threads per block (different defaults for CPU vs GPU)
+ifdef NUM_OF_THREADS_PER_BLOCK
+	KOKKOS_OPTS+=-DNUM_OF_THREADS_PER_BLOCK=$(NUM_OF_THREADS_PER_BLOCK)
+else
+	ifeq ($(DEVICE), GPU)
+		KOKKOS_OPTS+=-DNUM_OF_THREADS_PER_BLOCK=64
+	else
+		KOKKOS_OPTS+=-DNUM_OF_THREADS_PER_BLOCK=1
+	endif
+endif
+
+BIN := $(wildcard $(TARGET)*)
+
+
+# ------------------------------------------------------
+# Configuration
+# FDEBUG (full) : enables debugging on both host + device
+# LDEBUG (light): enables debugging on host
+# RELEASE
+CONFIG=RELEASE
+#CONFIG=FDEBUG
+
+ifeq ($(CONFIG),FDEBUG)
+	OPT =-O0 -g -Wall -DDOCK_DEBUG
+else ifeq ($(CONFIG),LDEBUG)
+	OPT =-O0 -g -Wall
+else ifeq ($(CONFIG),RELEASE)
+	OPT =-O3
+else
+	OPT =
+endif
+
+# ------------------------------------------------------
+# Reproduce results (remove randomness)
+REPRO=NO
+
+ifeq ($(REPRO),YES)
+	REP =-DREPRO
+else
+	REP =
+endif
+# ------------------------------------------------------
+
+all: odock
+
+check-env-dev:
+	@if test -z "$$DEVICE"; then \
+		echo "DEVICE is undefined"; \
+		exit 1; \
+	else \
+		if [ "$$DEVICE" = "GPU" ]; then \
+			echo "DEVICE is set to $$DEVICE"; \
+		else \
+			if [ "$$DEVICE" = "CPU" ]; then \
+				echo "DEVICE is set to $$DEVICE"; \
+			else \
+				if [ "$$DEVICE" = "SERIAL" ]; then \
+					echo "DEVICE is set to $$DEVICE"; \
+				else \
+					echo "DEVICE value is invalid. Set DEVICE to either CPU, GPU, or SERIAL (1 thread on CPU)"; \
+				fi; \
+			fi; \
+			if [ "$$OVERLAP" = "ON" ]; then \
+				echo "OVERLAP only works with the GPU version right now"; \
+				exit 1; \
+			fi; \
+		fi; \
+	fi; \
+	echo " "
+
+check-env-cpu:
+	@if test -z "$$CPU_INCLUDE_PATH"; then \
+		echo "CPU_INCLUDE_PATH is undefined"; \
+	else \
+		echo "CPU_INCLUDE_PATH is set to $$CPU_INCLUDE_PATH"; \
+	fi; \
+	if test -z "$$CPU_LIBRARY_PATH"; then \
+		echo "CPU_LIBRARY_PATH is undefined"; \
+	else \
+		echo "CPU_LIBRARY_PATH is set to $$CPU_LIBRARY_PATH"; \
+	fi; \
+	echo " "
+
+check-env-gpu:
+	@if test -z "$$GPU_INCLUDE_PATH"; then \
+		echo "GPU_INCLUDE_PATH is undefined"; \
+	else \
+		echo "GPU_INCLUDE_PATH is set to $$GPU_INCLUDE_PATH"; \
+	fi; \
+	if test -z "$$GPU_LIBRARY_PATH"; then \
+		echo "GPU_LIBRARY_PATH is undefined"; \
+	else \
+		echo "GPU_LIBRARY_PATH is set to $$GPU_LIBRARY_PATH"; \
+	fi; \
+	echo " "
+
+check-env-all: check-env-dev check-env-cpu check-env-gpu
+
+# ------------------------------------------------------
+# Priting out its git version hash
+
+GIT_VERSION := $(shell git describe --abbrev=40 --dirty --always --tags)
+
+CFLAGS+=-DVERSION=\"$(GIT_VERSION)\"
+
+# ------------------------------------------------------
+
+odock: check-env-all $(SRC)
+	$(CPP) \
+	$(SRC) \
+	$(CFLAGS) \
+	-o $(BIN_DIR)/$(TARGET) \
+	$(NWI) $(OPT) $(DD) $(REP) $(CD) $(KOKKOS_OPTS)
+
+
+clean:
+	rm -f $(BIN_DIR)/* initpop.txt
