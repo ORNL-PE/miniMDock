@@ -32,7 +32,7 @@ After successful compilation, the host binary **autodock_&lt;api&gt;_&lt;card&gt
 
 
 # Build
-Steps to build the CUDA, HIP, and Kokkos versions of miniAD, 
+Steps to build the CUDA, HIP, and Kokkos versions of miniMDock, 
 ```diff 
 + CUDA version 
 ```
@@ -98,7 +98,7 @@ Steps to build the CUDA, HIP, and Kokkos versions of miniAD,
 -nrun 10 
 ``` 
 ## References 
-MiniAD development, discussion, and benchmark have been published in 2020 IEEE/ACM International Workshop on P3HPC. Please cite these references if you use miniAD in your research: <br/>
+miniMDock development, discussion, and benchmark have been published in 2020 IEEE/ACM International Workshop on P3HPC. Please cite these references if you use miniMDock in your research: <br/>
 <a id="1">[1]</a> M. Thavappiragasam, A. Scheinberg, W. Elwasif, O. Hernandez and A. Sedova, "Performance Portability of Molecular Docking Miniapp On Leadership Computing Platforms," 2020 IEEE/ACM International Workshop on Performance, Portability and Productivity in HPC (P3HPC), GA, USA, 2020, pp. 36-44, doi: 10.1109/P3HPC51967.2020.00009.
  
 
