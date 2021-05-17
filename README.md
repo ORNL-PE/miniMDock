@@ -1,4 +1,4 @@
-# miniAutoDock-GPU 
+# miniMDock 
 
 A GPU based portable protein-ligand docking code, can be used for virtual drug discovery compound screens based on a molecular recognition model, that analysis a three-dimensional model of an interaction between a protein and a small molecule (ligand). The key calculation, namely, the Lamarckian genetic algorithm (LGA) combined with a local search  using a Solis-Wets based random optimization algorithm, are implemented using performance portable programming models (Kokkos) that enables porting to different emerging systems with minimal efforts, vendor-specific programming models such as CUDA for NVIDIA GPUs, and Heterogeneous-computing Interface for Portability (HIP) versions that can be applicable for AMD and NVIDIA GPUs.
 The miniapp is developed based on [AutoDock-GPU](https://github.com/ccsb-scripps/AutoDock-GPU), can be used to evaluate the performance and portability of GPU-accelerated particle-grid based protein ligand docking programs on different computer architectures, and targets NVIDIA and AMD GPUs. The miniMDock is available under GNU GPL version 2 and/or LGPL version 2.1 licenses.
