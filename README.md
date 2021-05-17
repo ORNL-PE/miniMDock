@@ -3,13 +3,14 @@
 A GPU based portable protein-ligand docking code, can be used for virtual drug discovery compound screens based on a molecular recognition model, that analysis a three-dimensional model of an interaction between a protein and a small molecule (ligand). The key calculation, namely, the Lamarckian genetic algorithm (LGA) combined with a local search  using a Solis-Wets based random optimization algorithm, are implemented using performance portable programming models (Kokkos) that enables porting to different emerging systems with minimal efforts, vendor-specific programming models such as CUDA for NVIDIA GPUs, and Heterogeneous-computing Interface for Portability (HIP) versions that can be applicable for AMD and NVIDIA GPUs.
 The miniapp is developed based on [AutoDock-GPU](https://github.com/ccsb-scripps/AutoDock-GPU), can be used to evaluate the performance and portability of GPU-accelerated particle-grid based protein ligand docking programs on different computer architectures, and targets NVIDIA and AMD GPUs. The miniMDock is available under GNU GPL version 2 and/or LGPL version 2.1 licenses.
 
-# Programming Base (API/ Model) 
+## Programming Base (API/ Model) 
 
 * CUDA 
 * HIP 
 * Kokkos  
 
-# Compilation in General
+## Compilation 
+### Compilation in General
 
 ```zsh 
 make DEVICE=<TYPE> API=<SUPPORT> CARD=<VENDOR> NUMWI=<NWI>  
@@ -31,7 +32,7 @@ After successful compilation, the host binary **autodock_&lt;api&gt;_&lt;card&gt
 | **&lt;N&gt;**       | work-group size | `1`, `2`, `4`, `8`,`16`, `32`, `64`, `128`, `256` |
 
 
-# Build
+### Programming model and platform based compilation
 Steps to build the CUDA, HIP, and Kokkos versions of miniMDock, 
 ```diff 
 + CUDA version 
@@ -77,7 +78,8 @@ Steps to build the CUDA, HIP, and Kokkos versions of miniMDock,
   make API=KOKKOS DEVICE=GPU  CARD=AMD
   ```
 #
-## Basic command 
+## Running
+### Basic command 
 
 ```zsh 
 ./bin/autodock_<api>_<card>_<N>wi \ 
@@ -90,7 +92,7 @@ Steps to build the CUDA, HIP, and Kokkos versions of miniMDock,
 | -lfile            |Ligand file    |&lt;ligand&gt;.pdbqt       |
 | -nrun		    | # LGA runs    |&lt;nruns&gt;              |	
 
-## Example 
+### Example 
 
 ```zsh 
 ./bin/autodock_hip_nv_64wi \ 
