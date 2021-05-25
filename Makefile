@@ -61,6 +61,12 @@ ifeq ($(API), KOKKOS)
     endif
   endif
   include Makefile.Kokkos
+else
+ifeq ($(API), OMPT)
+  override DEVICE:=GPU
+  export
+  include Makefile.Ompt
+endif
 endif
 endif
 endif
