@@ -21,20 +21,30 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
+#include<kernels.h>
 
-void gpu_sum_evals(uint32_t blocks, uint32_t threadsPerBlock)
+void gpu_calc_initpop(uint32_t nblocks, uint32_t threadsPerBlock, float* pConformations_current, float* pEnergies_current)
 {
-    #pragma omp target
+
+    #pragma omp target 
     #pragma omp distribute teams num_teams(nblocks) thread_limit(threadsPerBlock)
-    for (int blockIdx = 0; blockIdx < blocks; blockIdx++) {
-    	int sum_evals = 0;
-    	int* pEvals_of_new_entities = cData.pMem_evals_of_new_entities + blockIdx * cData.dockpars.pop_size;
-        #pragma omp parallel for reduction(+:sum_evals)	
-        for (int entity_counter = 0; entity_counter < cData.dockpars.pop_size; entity_counter++) 
-        {
-	    sum_evals += pEvals_of_new_entities[entity_counter];
-	}
-        cData.pMem_gpu_evals_of_runs[blockIdx] += sum_evals;
-   }
+    for (int blockIdx = 0; blockIdx < nblocks; blockIdx++) {  // Run over the league of teams
+        float3 calc_coords[MAX_NUM_OF_ATOMS];
+        float  sFloatAccumulator;
+        float  energy = 0.0f;
+        int    run_id = blockIdx / cData.dockpars.pop_size;
+        float* pGenotype = pMem_conformations_current + blockIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
+   
+        size_t scratchpad = MAX_NUM_OF_ATOMS + GENOTYPE_LENGTH_IN_GLOBMEM; 
+        #pragma omp parallel for\
+            private(scratchpad)\
+	    allocator(omp_pteam_memalloc)
+        for (int idx = 0; idx < threadsPerBlock; idx++) {
+	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, &sFloatAccumulator );
+        } 
+	// Write out final energy
+	    pMem_energies_current[blockIdx] = energy;
+	    cData.pMem_evals_of_new_entities[blockIdx] = 1;
+    }
 }
 

@@ -22,6 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
+#include<kernels.h>
 
 // if defined, new (experimental) SW genotype moves that are dependent
 // on nr of atoms and nr of torsions of ligand are used
