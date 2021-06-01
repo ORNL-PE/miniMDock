@@ -82,11 +82,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "performdocking.h"
 #include "correct_grad_axisangle.h"
 #include "GpuData.h"
-
+#include "kernels.hpp"
 
 // Device kernels
 //void SetKernelsGpuData(GpuData* pData);
 //void GetKernelsGpuData(GpuData* pData);
+/*
 void gpu_calc_initpop(uint32_t blocks, uint32_t threadsPerBlock, float* pConformations_current, float* pEnergies_current);
 void gpu_sum_evals(uint32_t blocks, uint32_t threadsPerBlock);
 void gpu_gen_and_eval_newpops(
@@ -104,6 +105,7 @@ void gpu_perform_LS(
     float* pMem_conformations_next,
 	float* pMem_energies_next
 );
+*/
 
 template <typename Clock, typename Duration1, typename Duration2>
 double elapsed_seconds(std::chrono::time_point<Clock, Duration1> start,

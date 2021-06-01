@@ -11,7 +11,8 @@ UNAME := $(shell uname)
 $(shell ./link_ompt.sh)
 
 #Using LLVM clang compiler
-CPP=clang++ -Ofast -std=c++17 -fopenmp  -fopenmp-targets=nvptx64-nvida-cuda --cuda-path=$(GPU_PATH)
+CPP=clang++ -Ofast -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvida-cuda --cuda-path=$(GPU_PATH)
+#CPP=clang++ -Ofast -std=c++17 -fopenmp -lopmtarget -fopenmp-targets=nvptx64-nvida-cuda --cuda-path=$(GPU_PATH)
 
 #Using IBM XL Compiler
 #CPP=xlc -std=c++17 -qsmp=omp -qoffload 
@@ -21,14 +22,14 @@ CPP=clang++ -Ofast -std=c++17 -fopenmp  -fopenmp-targets=nvptx64-nvida-cuda --cu
 COMMON_DIR=./common
 HOST_INC_DIR=./host/inc
 HOST_SRC_DIR=./host/src
-KRNL_DIR=./framework/ompt
+KRNL_DIR=./framework/omp_target
 BIN_DIR=./bin
 
 # Host sources
 SRC=$(wildcard $(HOST_SRC_DIR)/*.cpp)
 
-IFLAGS=-I$(COMMON_DIR) -I$(HOST_INC_DIR) -I$(GPU_INCLUDE_PATH) -I$(KRNL_DIR)
-LFLAGS=-L$(GPU_LIBRARY_PATH) -Wl,-rpath=$(GPU_LIBRARY_PATH):$(CPU_LIBRARY_PATH)
+IFLAGS=-I$(COMMON_DIR) -I$(HOST_INC_DIR) -I$(KRNL_DIR)
+#LFLAGS= -lomptarget 
 CFLAGS=$(IFLAGS) $(LFLAGS)
 
 OMPT_OPTS=-DUSE_OMPT
