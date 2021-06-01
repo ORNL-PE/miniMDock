@@ -1,6 +1,6 @@
 /*
 
-miniAD is a miniapp of the GPU version of AutoDock 4.2 running a Lamarckian Genetic Algorithm
+miniMDock is a miniapp of the GPU version of AutoDock 4.2 running a Lamarckian Genetic Algorithm
 Copyright (C) 2017 TU Darmstadt, Embedded Systems and Applications Group, Germany. All rights reserved.
 For some of the code, Copyright (C) 2019 Computational Structural Biology Center, the Scripps Research Institute.
 
@@ -28,40 +28,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <float.h>
 
 static const float MAXENERGY = FLT_MAX / 100.0; // Used to cap absurd energies so placeholder energy is always skipped in sorts
-
-#define RTERROR(status, s) \
-    if (status != cudaSuccess) { \
-        printf("%s %s\n", s, cudaGetErrorString(status)); \
-        assert(0); \
-        cudaDeviceReset(); \
-        exit(-1); \
-    }
-    
-
-#define SYNCHRONOUS    
-#ifdef SYNCHRONOUS
-#define LAUNCHERROR(s) \
-    { \
-        cudaError_t status = cudaGetLastError(); \
-        if (status != cudaSuccess) { \
-            printf("Error: %s launching kernel %s\n", cudaGetErrorString(status), s); \
-            cudaDeviceReset(); \
-            exit(-1); \
-        } \
-        status = cudaDeviceSynchronize(); \
-        RTERROR(status, s); \
-    }
-#else
-#define LAUNCHERROR(s) \
-    { \
-        cudaError_t status = cudaGetLastError(); \
-        if (status != cudaSuccess) { \
-            printf("Error: %s launching kernel %s\n", cudaGetErrorString(status), s); \
-            cudaDeviceReset(); \
-            exit(-1); \
-        } \
-    }
-#endif
 
 typedef struct
 {
@@ -94,9 +60,6 @@ typedef struct
         unsigned int    cons_limit;
         unsigned int    max_num_of_iters;
         float           qasp;
-        float           adam_beta1;
-        float           adam_beta2;
-        float           adam_epsilon;
 } GpuDockparameters;
 
 struct GpuData {
@@ -121,10 +84,6 @@ struct GpuData {
     float*                          pMem_angle_const;
     float*                          pMem_dependence_on_theta_const;
     float*                          pMem_dependence_on_rotangle_const;
-    
-    // CUDA-specific constants
-    unsigned int                    warpmask;
-    unsigned int                    warpbits;
 };
 
 struct GpuTempData {

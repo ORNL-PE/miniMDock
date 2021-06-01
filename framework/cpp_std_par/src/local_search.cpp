@@ -1,6 +1,6 @@
 /*
 
-miniAD is a miniapp of the GPU version of AutoDock 4.2 running a Lamarckian Genetic Algorithm
+miniMDock is a miniapp of the GPU version of AutoDock 4.2 running a Lamarckian Genetic Algorithm
 Copyright (C) 2017 TU Darmstadt, Embedded Systems and Applications Group, Germany. All rights reserved.
 For some of the code, Copyright (C) 2019 Computational Structural Biology Center, the Scripps Research Institute.
 

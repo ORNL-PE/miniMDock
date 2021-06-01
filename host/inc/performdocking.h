@@ -1,6 +1,6 @@
 /*
 
-miniAD is a miniapp of the GPU version of AutoDock 4.2 running a Lamarckian Genetic Algorithm
+miniMDock is a miniapp of the GPU version of AutoDock 4.2 running a Lamarckian Genetic Algorithm
 Copyright (C) 2017 TU Darmstadt, Embedded Systems and Applications Group, Germany. All rights reserved.
 For some of the code, Copyright (C) 2019 Computational Structural Biology Center, the Scripps Research Institute.
 
@@ -23,26 +23,27 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 
-
-
 #ifndef PERFORMDOCKING_H_
 #define PERFORMDOCKING_H_
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-//#include <math.h>
-#include <Kokkos_Core.hpp>
-#include "kokkos_settings.hpp"
-#include "profile.hpp"
+#include <cuda.h>
+#include <curand.h>
+#include <cuda_runtime_api.h>
+#include <cassert>
 
+//#include <math.h>
 #include "processgrid.h"
 #include "miscellaneous.h"
 #include "processligand.h"
 #include "getparameters.h"
 #include "calcenergy.h"
 #include "processresult.h"
-
+#include "simulation_state.hpp"
+#include "GpuData.h"
+#include "kernels.hpp"
 
 #define ELAPSEDSECS(stop,start) ((float) stop-start)/((float) CLOCKS_PER_SEC)
 
@@ -61,14 +62,25 @@ typedef struct {
 } Gradientparameters;
 #endif
 
-int docking_with_gpu(const Gridinfo*		mygrid,
-		     Kokkos::View<float*,HostType>& fgrid_h,
-			   Dockpars*		mypars,
-		     const Liganddata*		myligand_init,
-		     const Liganddata*		myxrayligand,
-//			   Profile&             profile,
-		     const int*			argc,
-		     char**			argv);
+void copy_map_to_gpu(	GpuTempData& tData,
+			std::vector<Map>& all_maps,
+			int t,
+			int size_of_one_map);
+
+void setup_gpu_for_docking(GpuData& cData, 
+                           GpuTempData& tData);
+void finish_gpu_from_docking(GpuData& cData, 
+                             GpuTempData& tData);
+int docking_with_gpu(const Gridinfo* 		mygrid,
+         	     /*const*/ float* 		cpu_floatgrids,
+		           Dockpars*		mypars,
+		     const Liganddata* 	 	myligand_init,
+		     const Liganddata* 		myxrayligand,
+		     const int* 		argc,
+		     char**			argv,
+			SimulationState&	sim_state,
+			GpuData& cData,
+			GpuTempData& tData);
 
 double check_progress(int* evals_of_runs,
 		      int generation_cnt,

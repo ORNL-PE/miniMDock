@@ -1,6 +1,6 @@
 /*
 
-miniMDock is a miniapp of the GPU version of AutoDock 4.2 running a Lamarckian Genetic Algorithm
+miniAD is a miniapp of the GPU version of AutoDock 4.2 running a Lamarckian Genetic Algorithm
 Copyright (C) 2017 TU Darmstadt, Embedded Systems and Applications Group, Germany. All rights reserved.
 For some of the code, Copyright (C) 2019 Computational Structural Biology Center, the Scripps Research Institute.
 
@@ -21,12 +21,34 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-#ifndef LOCAL_SEARCH_HPP
-#define LOCAL_SEARCH_HPP
 
-template<class Device>
-void solis_wets(Generation<Device>& next, Dockpars* mypars,DockingParams<Device>& docking_params,Constants<Device>& consts);
 
-#include "local_search.tpp"
+#ifndef KERNELS_H
+#define KERNELS_H
 
-#endif
+void gpu_calc_initpop(
+     uint32_t nblocks, 
+     uint32_t threadsPerBlock, 
+     float* pConformations_current, 
+     float* pEnergies_current
+     );
+void gpu_sum_evals(
+     uint32_t blocks, 
+     uint32_t threadsPerBlock
+     );
+void gpu_perform_LS( 
+     uint32_t nblocks, 
+     uint32_t nthreads, 
+     float* pMem_conformations_next, 
+     float* pMem_energies_next 
+     );
+void gpu_gen_and_eval_newpops(
+    uint32_t nblocks,
+    uint32_t threadsPerBlock,
+    float* pMem_conformations_current,
+    float* pMem_energies_current,
+    float* pMem_conformations_next,
+    float* pMem_energies_next
+    );
+
+#endif /* KERNELS_H */
