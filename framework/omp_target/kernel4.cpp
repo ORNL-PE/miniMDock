@@ -90,8 +90,7 @@ void gpu_gen_and_eval_newpops(
             sBestID[warpID] = bestID;
             sBestEnergy[warpID] = fminf(MAXENERGY, energy);
         }
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
                
         // Perform final reduction in warp 0
         if (warpID == 0)
@@ -116,8 +115,7 @@ void gpu_gen_and_eval_newpops(
                 sBestID[0] = bestID;
             }
         }
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
         
         // Copy best genome to next generation
         int dOffset = blockIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
@@ -149,8 +147,7 @@ void gpu_gen_and_eval_newpops(
 #endif
 		// Determining run ID
         run_id = blockIdx / cData.dockpars.pop_size;
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
 
 
 		if (idx < 4)	//it is not ensured that the four candidates will be different...
@@ -158,8 +155,7 @@ void gpu_gen_and_eval_newpops(
 			parent_candidates[idx]  = (int) (cData.dockpars.pop_size*randnums[idx]); //using randnums[0..3]
 			candidate_energies[idx] = pMem_energies_current[run_id*cData.dockpars.pop_size+parent_candidates[idx]];
 		}
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
 
 		if (idx < 2) 
 		{
@@ -184,8 +180,7 @@ void gpu_gen_and_eval_newpops(
 				}
             }
 		}
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
 
 		// Performing crossover
 		// Notice: dockpars_crossover_rate was scaled down to [0,1] in host
@@ -196,8 +191,7 @@ void gpu_gen_and_eval_newpops(
 				// Using randnum[7..8]
 				covr_point[idx] = (int) ((cData.dockpars.num_of_genes-1)*randnums[7+idx]);
 			}
-            __threadfence();
-            __syncthreads();
+//--- thread barrier
 			
 			// covr_point[0] should store the lower crossover-point
 			if (idx == 0) {
@@ -208,8 +202,7 @@ void gpu_gen_and_eval_newpops(
 				}
 			}
 
-            __threadfence();
-            __syncthreads();
+//--- thread barrier
 
 			for (uint32_t gene_counter = idx;
 			     gene_counter < cData.dockpars.num_of_genes;
@@ -243,8 +236,7 @@ void gpu_gen_and_eval_newpops(
             }
 		} // End of crossover
 
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
 
 		// Performing mutation
 		for (uint32_t gene_counter = idx;
@@ -269,8 +261,7 @@ void gpu_gen_and_eval_newpops(
 		} // End of mutation
 
 		// Calculating energy of new offspring
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
         gpu_calc_energy(
             offspring_genotype,
 			energy,
@@ -298,14 +289,6 @@ void gpu_gen_and_eval_newpops(
             pMem_conformations_next[blockIdx * GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter] = offspring_genotype[gene_counter];
         }        
     }
-#if 0
-    if ((idx == 0) && (blockIdx == 0))
-    {
-        printf("%06d %16.8f ", blockIdx, pMem_energies_next[blockIdx]);
-        for (int i = 0; i < cData.dockpars.num_of_genes; i++)
-            printf("%12.6f ", pMem_conformations_next[GENOTYPE_LENGTH_IN_GLOBMEM*blockIdx + i]);
-    }
-#endif
 }
 
 

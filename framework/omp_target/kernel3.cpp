@@ -87,9 +87,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 		iteration_cnt = 0;
 		evaluation_cnt = 0;        
 	      }
-    __threadfence();
-    __syncthreads();
-
+//--- thread barrier
     size_t offset = (run_id * cData.dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
 	for (uint32_t gene_counter = idx;
 	     gene_counter < cData.dockpars.num_of_genes;
@@ -97,9 +95,8 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
         offspring_genotype[gene_counter] = pMem_conformations_next[offset + gene_counter];
 		genotype_bias[gene_counter] = 0.0f;
 	}
-    __threadfence();
-	__syncthreads();
     
+//--- thread barrier
 
 #ifdef SWAT3
 	float lig_scale = 1.0f/sqrt((float)cData.dockpars.num_of_atoms);
@@ -151,8 +148,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 		}
 
 		// Evaluating candidate
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
 
 		// ==================================================================
 		gpu_calc_energy(
@@ -167,8 +163,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 		if (idx == 0) {
 			evaluation_cnt++;
 		}
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
 
 		if (candidate_energy < offspring_energy)	// If candidate is better, success
 		{
@@ -185,8 +180,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 
 			// Work-item 0 will overwrite the shared variables
 			// used in the previous if condition
-			__threadfence();
-            __syncthreads();
+//--- thread barrier
 
 			if (idx == 0)
 			{
@@ -207,8 +201,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 			}
 
 			// Evaluating candidate
-			__threadfence();
-            __syncthreads();
+//--- thread barrier
 
 			// =================================================================
 			gpu_calc_energy(
@@ -227,8 +220,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 				printf("%-18s [%-5s]---{%-5s}   [%-10.8f]---{%-10.8f}\n", "-ENERGY-KERNEL3-", "GRIDS", "INTRA", partial_interE[0], partial_intraE[0]);
 				#endif
 			}
-            __threadfence();
-            __syncthreads();
+//--- thread barrier
 
 			if (candidate_energy < offspring_energy) // If candidate is better, success
 			{
@@ -245,8 +237,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 
 				// Work-item 0 will overwrite the shared variables
 				// used in the previous if condition
-                __threadfence();
-                __syncthreads();
+//--- thread barrier
 
 				if (idx == 0)
 				{
@@ -288,8 +279,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 					cons_fail = 0;
 				}
 		}
-        __threadfence();
-        __syncthreads();
+//--- thread barrier
 	}
 
 	// Updating eval counter and energy
@@ -299,7 +289,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 	}
 
 	// Mapping torsion angles and writing out results
-    offset = (run_id*cData.dockpars.pop_size+entity_id)*GENOTYPE_LENGTH_IN_GLOBMEM;
+        offset = (run_id*cData.dockpars.pop_size+entity_id)*GENOTYPE_LENGTH_IN_GLOBMEM;
 	for (uint32_t gene_counter = idx;
 	     gene_counter < cData.dockpars.num_of_genes;
 	     gene_counter+= blockDim.x) {

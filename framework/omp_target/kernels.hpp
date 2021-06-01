@@ -26,9 +26,22 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #ifndef KERNELS_H
 #define KERNELS_H
 
-void gpu_calc_initpop(uint32_t nblocks, uint32_t threadsPerBlock, float* pConformations_current, float* pEnergies_current)
-void gpu_sum_evals(uint32_t blocks, uint32_t threadsPerBlock)
-void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformations_next, float* pMem_energies_next )
+void gpu_calc_initpop(
+     uint32_t nblocks, 
+     uint32_t threadsPerBlock, 
+     float* pConformations_current, 
+     float* pEnergies_current
+     );
+void gpu_sum_evals(
+     uint32_t blocks, 
+     uint32_t threadsPerBlock
+     );
+void gpu_perform_LS( 
+     uint32_t nblocks, 
+     uint32_t nthreads, 
+     float* pMem_conformations_next, 
+     float* pMem_energies_next 
+     );
 void gpu_gen_and_eval_newpops(
     uint32_t nblocks,
     uint32_t threadsPerBlock,
@@ -36,6 +49,6 @@ void gpu_gen_and_eval_newpops(
     float* pMem_energies_current,
     float* pMem_conformations_next,
     float* pMem_energies_next
-)
+    );
 
 #endif /* KERNELS_H */
