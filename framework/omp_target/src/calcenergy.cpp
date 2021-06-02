@@ -22,6 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
+#include "kernels.hpp"
+#include "calcenergy.hpp"
 
 //#define DEBUG_ENERGY_KERNEL
 
@@ -104,7 +106,9 @@ void gpu_calc_energy(
     float& energy,
     int& run_id,
     float3* calc_coords,  
-    float* pFloatAccumulator
+    float* pFloatAccumulator,
+    int idx,
+    uint32_t blockDim
 ) 
 
 //The GPU device function calculates the energy of the entity described by genotype, dockpars and the liganddata
@@ -120,7 +124,7 @@ void gpu_calc_energy(
 
 	// Initializing gradients (forces) 
 	// Derived from autodockdev/maps.py
-	#pragma omp target team distribute parallel for
+	#pragma omp target teams distribute parallel for
 	for (uint atom_id = idx;
 		  atom_id < cData.dockpars.num_of_atoms;
 		  atom_id+= blockDim) {
@@ -159,7 +163,7 @@ void gpu_calc_energy(
 	// ================================================
 	// CALCULATING ATOMIC POSITIONS AFTER ROTATIONS
 	// ================================================
-	#pragma omp target team distribute parallel for
+	#pragma omp target teams distribute parallel for
 	for (uint rotation_counter  = idx;
 	          rotation_counter  < cData.dockpars.rotbondlist_length;
 	          rotation_counter += blockDim)
@@ -234,7 +238,7 @@ void gpu_calc_energy(
 	// ================================================
 	// CALCULATING INTERMOLECULAR ENERGY
 	// ================================================
-	#pragma omp target team distribute parallel for
+	#pragma omp target teams distribute parallel for
 	for (uint atom_id = idx;
 	          atom_id < cData.dockpars.num_of_atoms;
 	          atom_id+= blockDim)
@@ -319,7 +323,7 @@ void gpu_calc_energy(
 	// ================================================
 	// CALCULATING INTRAMOLECULAR ENERGY
 	// ================================================
-	#pragma omp target team distribute parallel for
+	#pragma omp target teams distribute parallel for
 	for (uint contributor_counter = idx;
 	          contributor_counter < cData.dockpars.num_of_intraE_contributors;
 	          contributor_counter += blockDim)
@@ -437,9 +441,5 @@ void gpu_calc_energy(
 
 
 	// reduction to calculate energy
-    REDUCEFLOATSUM(energy, pFloatAccumulator)
-#if defined (DEBUG_ENERGY_KERNEL)
-    REDUCEFLOATSUM(intraE, pFloatAccumulator)
-#endif
 }
 

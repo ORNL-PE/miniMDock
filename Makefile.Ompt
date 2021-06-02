@@ -22,13 +22,16 @@ CPP=clang++ -Ofast -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvida-cuda --cud
 COMMON_DIR=./common
 HOST_INC_DIR=./host/inc
 HOST_SRC_DIR=./host/src
-KRNL_DIR=./framework/omp_target
+KRNL_INC_DIR=./framework/omp_target/inc
+KRNL_SRC_DIR=./framework/omp_target/src
 BIN_DIR=./bin
 
 # Host sources
-SRC=$(wildcard $(HOST_SRC_DIR)/*.cpp)
+HOST_SRC=$(wildcard $(HOST_SRC_DIR)/*.cpp)
+KRNL_SRC=$(wildcard $(KRNL_SRC_DIR)/*.cpp)
+SRC=$(HOST_SRC) $(KRNL_SRC)
 
-IFLAGS=-I$(COMMON_DIR) -I$(HOST_INC_DIR) -I$(KRNL_DIR)
+IFLAGS=-I$(COMMON_DIR) -I$(HOST_INC_DIR) -I$(KRNL_INC_DIR)
 #LFLAGS= -lomptarget 
 CFLAGS=$(IFLAGS) $(LFLAGS)
 
@@ -45,17 +48,6 @@ endif
 ifeq ($(OVERLAP), ON)
 	ifeq ($(DEVICE), GPU)
 		OMPT_OPTS+=-DUSE_OMP
-	endif
-endif
-
-# Set number of threads per block (different defaults for CPU vs GPU)
-ifdef NUM_OF_THREADS_PER_BLOCK
-	OMPT_OPTS+=-DNUM_OF_THREADS_PER_BLOCK=$(NUM_OF_THREADS_PER_BLOCK)
-else
-	ifeq ($(DEVICE), GPU)
-		OMPT_OPTS+=-DNUM_OF_THREADS_PER_BLOCK=64
-	else
-		OMPT_OPTS+=-DNUM_OF_THREADS_PER_BLOCK=1
 	endif
 endif
 
@@ -155,7 +147,8 @@ CFLAGS+=-DVERSION=\"$(GIT_VERSION)\"
 
 # ------------------------------------------------------
 
-odock: check-env-all $(SRC)
+#odock: check-env-all $(HOST_SRC) $(KRNL_SRC)
+odock: check-env-all $(SRC) 
 	$(CPP) \
 	$(SRC) \
 	$(CFLAGS) \

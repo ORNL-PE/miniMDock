@@ -22,6 +22,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
+#include <cstdint>
+#include <cassert>
+#include "defines.h"
+#include "calcenergy.h"
+#include "GpuData.h"
+#include <cuda.h>
+#include <cuda_runtime_api.h>
+
+//#include "calcenergy.hpp"
+//#include "auxiliary_genetic.hpp"
 
 #ifndef KERNELS_H
 #define KERNELS_H
@@ -50,5 +60,17 @@ void gpu_gen_and_eval_newpops(
     float* pMem_conformations_next,
     float* pMem_energies_next
     );
+
+
+static __constant__ GpuData cData;
+
+// Kernel files
+//#include "../src/calcenergy.cpp"
+//#include "calcMergeEneGra.cpp"
+//#include "../src/auxiliary_genetic.cpp"
+//#include "../src/kernel1.cpp"
+//#include "../src/kernel2.cpp"
+//#include "../src/kernel3.cpp"
+//#include "../src/kernel4.cpp"
 
 #endif /* KERNELS_H */

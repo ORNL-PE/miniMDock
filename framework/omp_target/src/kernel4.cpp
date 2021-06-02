@@ -22,7 +22,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
-#include<kernels.h>
+#include "kernels.hpp"
+#include "calcenergy.hpp"
+#include "auxiliary_genetic.hpp"
 
 //#define DEBUG_ENERGY_KERNEL4
 
@@ -35,8 +37,9 @@ void gpu_gen_and_eval_newpops(
     float* pMem_energies_next
 )
 {
+    const int blockDim = threadsPerBlock;
     #pragma omp target
-    #pragma omp distribute teams num_teams(nblocks) thread_limit(threadsPerBlock)
+    #pragma omp teams distribute num_teams(nblocks) thread_limit(threadsPerBlock)
     for (int blockIdx = 0; blockIdx < nblocks; blockIdx++){
 	 float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
 	 int parent_candidates[4];
@@ -49,7 +52,7 @@ void gpu_gen_and_eval_newpops(
 	 float3 calc_coords[MAX_NUM_OF_ATOMS];
          float sFloatAccumulator;
 	 #pragma omp parallel for
-         
+         for( int idx = 0; idx < threadsPerBlock; idx++){  
 	 int run_id;    
 	 int temp_covr_point;
 	 float energy;
@@ -70,7 +73,6 @@ void gpu_gen_and_eval_newpops(
          }
         
          // Scan through population (we already picked up a blockDim's worth above so skip)
-         int blockDim = threadsPerBlock;
          for (int i = blockIdx + blockDim + idx; i < blockIdx + cData.dockpars.pop_size; i += blockDim)
          {
             float e = pMem_energies_current[i];
@@ -82,7 +84,8 @@ void gpu_gen_and_eval_newpops(
         }
         
         // Reduce to shared memory by warp
-        int tgx = idx & cData.warpmask;
+        /*
+ 	int tgx = idx & cData.warpmask;
         WARPMINIMUM2(tgx, energy, bestID);
         int warpID = idx >> cData.warpbits;
         if (tgx == 0)
@@ -115,6 +118,7 @@ void gpu_gen_and_eval_newpops(
                 sBestID[0] = bestID;
             }
         }
+        */
 //--- thread barrier
         
         // Copy best genome to next generation
@@ -134,7 +138,7 @@ void gpu_gen_and_eval_newpops(
 		for (uint32_t gene_counter = idx;
 		     gene_counter < 10;
 		     gene_counter += blockDim) {
-			 randnums[gene_counter] = gpu_randf(cData.pMem_prng_states);
+			 randnums[gene_counter] = gpu_randf(cData.pMem_prng_states, blockIdx, idx);
 		}
 #if 0
         if ((idx == 0) && (blockIdx == 1))
@@ -245,15 +249,15 @@ void gpu_gen_and_eval_newpops(
 		{
 			// Notice: dockpars_mutation_rate was scaled down to [0,1] in host
 			// to reduce number of operations in device
-			if (/*100.0f**/gpu_randf(cData.pMem_prng_states) < cData.dockpars.mutation_rate)
+			if (/*100.0f**/gpu_randf(cData.pMem_prng_states, blockIdx, idx) < cData.dockpars.mutation_rate)
 			{
 				// Translation genes
 				if (gene_counter < 3) {
-					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dmov*(2*gpu_randf(cData.pMem_prng_states)-1);
+					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dmov*(2*gpu_randf(cData.pMem_prng_states, blockIdx, idx)-1);
 				}
 				// Orientation and torsion genes
 				else {
-					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dang*(2*gpu_randf(cData.pMem_prng_states)-1);
+					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dang*(2*gpu_randf(cData.pMem_prng_states, blockIdx, idx)-1);
 					map_angle(offspring_genotype[gene_counter]);
 				}
 
@@ -262,12 +266,14 @@ void gpu_gen_and_eval_newpops(
 
 		// Calculating energy of new offspring
 //--- thread barrier
-        gpu_calc_energy(
-            offspring_genotype,
+        	gpu_calc_energy(
+            		offspring_genotype,
 			energy,
 			run_id,
 			calc_coords,
-            &sFloatAccumulator
+                	&sFloatAccumulator,
+	        	idx,
+                	threadsPerBlock
 		);
         
         
@@ -288,7 +294,10 @@ void gpu_gen_and_eval_newpops(
         {
             pMem_conformations_next[blockIdx * GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter] = offspring_genotype[gene_counter];
         }        
-    }
+
+      }
+    }  //idx
+    }  //blockIdx
 }
 
 

@@ -22,12 +22,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
+#include "kernels.hpp"
+#include "auxiliary_genetic.hpp"
 
 // -------------------------------------------------------
 //
 // -------------------------------------------------------
 inline uint32_t gpu_rand(
-    uint32_t* prng_states
+    	uint32_t* prng_states,
+    	int blockIdx, int threadIdx
 )
 //The GPU device function generates a random int
 //with a linear congruential generator.
@@ -40,14 +43,14 @@ inline uint32_t gpu_rand(
 
   	// Current state of the threads own PRNG
   	// state = prng_states[get_group_id(0)*NUM_OF_THREADS_PER_BLOCK + get_local_id(0)];
-	state = prng_states[blockIdx.x * blockDim.x + threadIdx.x];
+	state = prng_states[blockIdx * NUM_OF_THREADS_PER_BLOCK + threadIdx];
 
 	// Calculating next state
   	state = (RAND_A*state+RAND_C);
 
   	// Saving next state to memory
   	// prng_states[get_group_id(0)*NUM_OF_THREADS_PER_BLOCK + get_local_id(0)] = state;
-	prng_states[blockIdx.x * blockDim.x + threadIdx.x] = state;
+	prng_states[blockIdx * NUM_OF_THREADS_PER_BLOCK + threadIdx] = state;
 
   return state;
 }
@@ -56,7 +59,8 @@ inline uint32_t gpu_rand(
 //
 // -------------------------------------------------------
 inline float gpu_randf(
-		uint32_t* prng_states
+		uint32_t* prng_states,
+		int blockIdx, int threadIdx
 )
 //The GPU device function generates a
 //random float greater than (or equal to) 0 and less than 1.
@@ -65,7 +69,7 @@ inline float gpu_randf(
   	float state;
 
 	// State will be between 0 and 1
-	state =  ((float)gpu_rand(prng_states) / (float)MAX_UINT)*0.999999f;
+	state =  ((float)gpu_rand(prng_states, blockIdx, threadIdx) / (float)MAX_UINT)*0.999999f;
 
   return state;
 }
@@ -87,4 +91,3 @@ inline void map_angle(float& angle)
 	}
 }
 
-#endif
