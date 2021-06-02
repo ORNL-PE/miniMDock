@@ -128,6 +128,7 @@ int main(int argc, char* argv[])
 	}
 
 	setup_gpu_for_docking(cData,tData);
+
 #endif
 
 		//int t_id = 0;
@@ -189,8 +190,7 @@ int main(int argc, char* argv[])
 	                start_timer(resulting_timer);
 	                process_result(&(mygrid), floatgrids.data(), &(mypars), &(myligand_init), &(myxrayligand), &argc,argv, sim_state);
 	                resulting_time=seconds_since(resulting_timer);
-
-	finish_gpu_from_docking(cData,tData);
+		finish_gpu_from_docking(cData,tData);
 #endif
 
 #ifndef _WIN32

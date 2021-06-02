@@ -40,29 +40,36 @@ void gpu_calc_initpop(
      uint32_t nblocks, 
      uint32_t threadsPerBlock, 
      float* pConformations_current, 
-     float* pEnergies_current
+     float* pEnergies_current,
+     GpuData& cData
      );
+
 void gpu_sum_evals(
      uint32_t blocks, 
-     uint32_t threadsPerBlock
+     uint32_t threadsPerBlock,
+     GpuData& cData
      );
+
 void gpu_perform_LS( 
      uint32_t nblocks, 
      uint32_t nthreads, 
      float* pMem_conformations_next, 
-     float* pMem_energies_next 
+     float* pMem_energies_next,
+     GpuData& cData 
      );
+
 void gpu_gen_and_eval_newpops(
     uint32_t nblocks,
     uint32_t threadsPerBlock,
     float* pMem_conformations_current,
     float* pMem_energies_current,
     float* pMem_conformations_next,
-    float* pMem_energies_next
+    float* pMem_energies_next,
+    GpuData& cData
     );
 
 
-static __constant__ GpuData cData;
+//static __constant__ GpuData cData;
 
 // Kernel files
 //#include "../src/calcenergy.cpp"

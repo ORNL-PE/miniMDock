@@ -28,12 +28,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //#define DEBUG_ENERGY_KERNEL
 
 // No needed to be included as all kernel sources are stringified
-#define invpi2 1.0f/(PI_TIMES_2)
 
-__forceinline__ float fmod_pi2(float x)
-{
-	return x-(int)(invpi2*x)*PI_TIMES_2;
-}
+
+#define invpi2 1.0f/(PI_TIMES_2)
 
 #define fast_acos_a  9.78056e-05f
 #define fast_acos_b -0.00104588f
@@ -42,6 +39,12 @@ __forceinline__ float fmod_pi2(float x)
 #define fast_acos_e  2.74084f
 #define fast_acos_f  0.370388f
 #define fast_acos_o -(fast_acos_a+fast_acos_b+fast_acos_c+fast_acos_d)
+
+#pragma omp declare target
+__forceinline__ float fmod_pi2(float x)
+{
+	return x-(int)(invpi2*x)*PI_TIMES_2;
+}
 
 __forceinline__ float fast_acos(float cosine)
 {
@@ -97,10 +100,11 @@ __forceinline__ float4 quaternion_rotate(float4 v, float4 rot)
     result.w = 0.0f;	
 	return result;
 }
+#pragma omp end declare target
 
 
 // All related pragmas are in defines.h (accesible by host and device code)
-
+#pragma omp declare target
 void gpu_calc_energy(	    
     float* pGenotype,
     float& energy,
@@ -108,7 +112,8 @@ void gpu_calc_energy(
     float3* calc_coords,  
     float* pFloatAccumulator,
     int idx,
-    uint32_t blockDim
+    uint32_t blockDim,
+    GpuData& cData
 ) 
 
 //The GPU device function calculates the energy of the entity described by genotype, dockpars and the liganddata
@@ -116,6 +121,8 @@ void gpu_calc_energy(
 //of the run whose population includes the current entity (which can be determined with blockIdx.x), since this
 //determines which reference orientation should be used.
 {
+    //int idx = omp_get_thread_num();
+
 	energy = 0.0f;
 #if defined (DEBUG_ENERGY_KERNEL)    
     float interE = 0.0f;
@@ -442,4 +449,6 @@ void gpu_calc_energy(
 
 	// reduction to calculate energy
 }
+
+#pragma omp end declare target
 

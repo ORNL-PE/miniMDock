@@ -34,7 +34,8 @@ void gpu_gen_and_eval_newpops(
     float* pMem_conformations_current,
     float* pMem_energies_current,
     float* pMem_conformations_next,
-    float* pMem_energies_next
+    float* pMem_energies_next,
+    GpuData& cData
 )
 {
     const int blockDim = threadsPerBlock;
@@ -273,7 +274,8 @@ void gpu_gen_and_eval_newpops(
 			calc_coords,
                 	&sFloatAccumulator,
 	        	idx,
-                	threadsPerBlock
+                	threadsPerBlock,
+			cData
 		);
         
         

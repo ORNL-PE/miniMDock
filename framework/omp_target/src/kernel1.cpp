@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "kernels.hpp"
 #include "calcenergy.hpp"
 
-void gpu_calc_initpop(uint32_t nblocks, uint32_t threadsPerBlock, float* pMem_conformations_current, float* pMem_energies_current)
+void gpu_calc_initpop(uint32_t nblocks, uint32_t threadsPerBlock, float* pMem_conformations_current, float* pMem_energies_current, GpuData& cData)
 {
 
     #pragma omp target 
@@ -41,7 +41,7 @@ void gpu_calc_initpop(uint32_t nblocks, uint32_t threadsPerBlock, float* pMem_co
 //            private(scratchpad)\
 //	    allocator(omp_pteam_memalloc)
         for (int idx = 0; idx < threadsPerBlock; idx++) {
-	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, &sFloatAccumulator, idx, threadsPerBlock );
+	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, &sFloatAccumulator, idx, threadsPerBlock, cData );
         } 
 	// Write out final energy
 	    pMem_energies_current[blockIdx] = energy;

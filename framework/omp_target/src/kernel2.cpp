@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "kernels.hpp"
 
-void gpu_sum_evals(uint32_t blocks, uint32_t threadsPerBlock)
+void gpu_sum_evals(uint32_t blocks, uint32_t threadsPerBlock, GpuData& cData)
 {
     #pragma omp target
     #pragma omp teams distribute num_teams(blocks) thread_limit(threadsPerBlock)

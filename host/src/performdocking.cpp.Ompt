@@ -87,22 +87,24 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //void SetKernelsGpuData(GpuData* pData);
 //void GetKernelsGpuData(GpuData* pData);
 /*
-void gpu_calc_initpop(uint32_t blocks, uint32_t threadsPerBlock, float* pConformations_current, float* pEnergies_current);
-void gpu_sum_evals(uint32_t blocks, uint32_t threadsPerBlock);
+void gpu_calc_initpop(uint32_t blocks, uint32_t threadsPerBlock, float* pConformations_current, float* pEnergies_current, GpuData& cData);
+void gpu_sum_evals(uint32_t blocks, uint32_t threadsPerBlock, GpuData& cData);
 void gpu_gen_and_eval_newpops(
     uint32_t blocks,
     uint32_t threadsPerBlock,
     float* pMem_conformations_current,
     float* pMem_energies_current,
     float* pMem_conformations_next,
-    float* pMem_energies_next
+    float* pMem_energies_next,
+    GpuData& cData
 );
 
 void gpu_perform_LS(
     uint32_t blocks,
     uint32_t threads,
     float* pMem_conformations_next,
-	float* pMem_energies_next
+    float* pMem_energies_next,
+    GpuData& cData
 );
 */
 /*
@@ -606,7 +608,7 @@ filled with clock() */
 		printf("%-25s", "\tK_INIT");fflush(stdout);
         cudaDeviceSynchronize();
 	#endif
-    gpu_calc_initpop(kernel1_gxsize, kernel1_lxsize, pMem_conformations_current, pMem_energies_current);
+    gpu_calc_initpop(kernel1_gxsize, kernel1_lxsize, pMem_conformations_current, pMem_energies_current, cData);
 	//runKernel1D(command_queue,kernel1,kernel1_gxsize,kernel1_lxsize,&time_start_kernel,&time_end_kernel);
 	#ifdef DOCK_DEBUG
         cudaDeviceSynchronize();
@@ -619,7 +621,7 @@ filled with clock() */
 		printf("%-25s", "\tK_EVAL");fflush(stdout);
 	#endif
 	//runKernel1D(command_queue,kernel2,kernel2_gxsize,kernel2_lxsize,&time_start_kernel,&time_end_kernel);
-    gpu_sum_evals(kernel2_gxsize, kernel2_lxsize);
+    gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData);
 	#ifdef DOCK_DEBUG
         cudaDeviceSynchronize();
 		printf("%15s" ," ... Finished\n");fflush(stdout);
@@ -710,7 +712,7 @@ filled with clock() */
 		#endif
         
 		//runKernel1D(command_queue,kernel4,kernel4_gxsize,kernel4_lxsize,&time_start_kernel,&time_end_kernel);
-        gpu_gen_and_eval_newpops(kernel4_gxsize, kernel4_lxsize, pMem_conformations_current, pMem_energies_current, pMem_conformations_next, pMem_energies_next);
+        gpu_gen_and_eval_newpops(kernel4_gxsize, kernel4_lxsize, pMem_conformations_current, pMem_energies_current, pMem_conformations_next, pMem_energies_next, cData);
 		#ifdef DOCK_DEBUG
 			printf("%15s", " ... Finished\n");fflush(stdout);
 		#endif
@@ -722,7 +724,7 @@ filled with clock() */
 					printf("%-25s", "\tK_LS_SOLISWETS");fflush(stdout);
 				#endif
 				//runKernel1D(command_queue,kernel3,kernel3_gxsize,kernel3_lxsize,&time_start_kernel,&time_end_kernel);
-                gpu_perform_LS(kernel3_gxsize, kernel3_lxsize, pMem_conformations_next, pMem_energies_next);                
+                gpu_perform_LS(kernel3_gxsize, kernel3_lxsize, pMem_conformations_next, pMem_energies_next, cData);                
 				#ifdef DOCK_DEBUG
 					printf("%15s" ," ... Finished\n");fflush(stdout);
 				#endif
@@ -736,7 +738,7 @@ filled with clock() */
 			printf("%-25s", "\tK_EVAL");fflush(stdout);
 		#endif
 		//runKernel1D(command_queue,kernel2,kernel2_gxsize,kernel2_lxsize,&time_start_kernel,&time_end_kernel);
-        gpu_sum_evals(kernel2_gxsize, kernel2_lxsize);       
+        gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData);       
         
 		#ifdef DOCK_DEBUG
 			printf("%15s" ," ... Finished\n");fflush(stdout);

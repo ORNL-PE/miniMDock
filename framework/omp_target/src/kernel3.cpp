@@ -30,7 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // on nr of atoms and nr of torsions of ligand are used
 #define SWAT3 // Third set of Solis-Wets hyperparameters by Andreas Tillack
 
-void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformations_next, float* pMem_energies_next )
+void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformations_next, float* pMem_energies_next, GpuData& cData )
 
 //The GPU global function performs local search on the pre-defined entities of conformations_next.
 //The number of blocks which should be started equals to num_of_lsentities*num_of_runs.
@@ -161,7 +161,8 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
                 calc_coords,
                 &sFloatAccumulator,
 		idx,
-	        nthreads
+	        nthreads,
+		cData
 				);
 		// =================================================================
 
@@ -216,7 +217,8 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
                 	calc_coords,
                 	&sFloatAccumulator,
 	        	idx,
-                	nthreads
+                	nthreads,
+  			cData
             		);
 			// =================================================================
 
