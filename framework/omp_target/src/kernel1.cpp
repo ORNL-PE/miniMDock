@@ -29,23 +29,30 @@ void gpu_calc_initpop(uint32_t nblocks, uint32_t threadsPerBlock, float* pMem_co
 
     #pragma omp target 
     #pragma omp teams distribute num_teams(nblocks) thread_limit(threadsPerBlock)
-    for (int blockIdx = 0; blockIdx < nblocks; blockIdx++) {  // Run over the league of teams
+    for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)
+    {  
         float3 calc_coords[MAX_NUM_OF_ATOMS];
         float  sFloatAccumulator;
-        float  energy = 0.0f;
-        int    run_id = blockIdx / cData.dockpars.pop_size;
-        float* pGenotype = pMem_conformations_current + blockIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
    
         size_t scratchpad = MAX_NUM_OF_ATOMS + GENOTYPE_LENGTH_IN_GLOBMEM; 
         #pragma omp parallel for\
 //            private(scratchpad)\
 //	    allocator(omp_pteam_memalloc)
-        for (int idx = 0; idx < threadsPerBlock; idx++) {
-	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, &sFloatAccumulator, idx, threadsPerBlock, cData );
-        } 
-	// Write out final energy
-	    pMem_energies_current[blockIdx] = energy;
-	    cData.pMem_evals_of_new_entities[blockIdx] = 1;
-    }
+        for (int idx = 0; idx < threadsPerBlock; idx++) 
+	{
+            float  energy = 0.0f;
+            int teamIdx = omp_get_team_num();
+            int threadIdx = omp_get_thread_num();
+            int run_id = teamIdx / cData.dockpars.pop_size;
+            float* pGenotype = pMem_conformations_current + teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
+	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, &sFloatAccumulator, threadIdx, threadsPerBlock, cData );
+	
+            // Write out final energy
+            if (threadIdx == 0){
+                pMem_energies_current[teamIdx] = energy;
+                cData.pMem_evals_of_new_entities[teamIdx] = 1;
+	    }
+        }// End for a team 
+    }// End for a set of teams
 }
 

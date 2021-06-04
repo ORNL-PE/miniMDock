@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "GpuData.h"
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#include <omp.h>
 
 //#include "calcenergy.hpp"
 //#include "auxiliary_genetic.hpp"

@@ -41,7 +41,8 @@ void gpu_gen_and_eval_newpops(
     const int blockDim = threadsPerBlock;
     #pragma omp target
     #pragma omp teams distribute num_teams(nblocks) thread_limit(threadsPerBlock)
-    for (int blockIdx = 0; blockIdx < nblocks; blockIdx++){
+    for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)
+    {
 	 float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
 	 int parent_candidates[4];
 	 float candidate_energies[4];
@@ -53,38 +54,42 @@ void gpu_gen_and_eval_newpops(
 	 float3 calc_coords[MAX_NUM_OF_ATOMS];
          float sFloatAccumulator;
 	 #pragma omp parallel for
-         for( int idx = 0; idx < threadsPerBlock; idx++){  
-	 int run_id;    
-	 int temp_covr_point;
-	 float energy;
-         int bestID; 
+         for( int idx = 0; idx < threadsPerBlock; idx++)
+	 { 
+            int teamIdx = omp_get_team_num();
+            int threadIdx = omp_get_thread_num();
+ 
+	    int run_id;    
+	    int temp_covr_point;
+	    float energy;
+            int bestID; 
 
-	 // In this case this compute-unit is responsible for elitist selection
-	 if ((blockIdx % cData.dockpars.pop_size) == 0) {
-         // Find and copy best member of population to position 0
-         if (idx < cData.dockpars.pop_size)
-         {
-            bestID = blockIdx + idx;
-            energy = pMem_energies_current[blockIdx + idx];
-         }
-         else
-         {
-            bestID = -1;
-            energy = FLT_MAX;
-         }
-        
-         // Scan through population (we already picked up a blockDim's worth above so skip)
-         for (int i = blockIdx + blockDim + idx; i < blockIdx + cData.dockpars.pop_size; i += blockDim)
-         {
-            float e = pMem_energies_current[i];
-            if (e < energy)
+	    // In this case this compute-unit is responsible for elitist selection
+	    if ((teamIdx % cData.dockpars.pop_size) == 0) {
+            // Find and copy best member of population to position 0
+            if (threadIdx < cData.dockpars.pop_size)
             {
-                bestID = i;
-                energy = e;
+               bestID = teamIdx + threadIdx;
+               energy = pMem_energies_current[teamIdx + threadIdx];
             }
-        }
+            else
+            {
+               bestID = -1;
+               energy = FLT_MAX;
+            }
         
-        // Reduce to shared memory by warp
+            // Scan through population (we already picked up a blockDim's worth above so skip)
+            for (int i = teamIdx + blockDim + threadIdx; i < teamIdx + cData.dockpars.pop_size; i += blockDim)
+            {
+               float e = pMem_energies_current[i];
+               if (e < energy)
+               {
+                  bestID = i;
+                  energy = e;
+               }
+           }
+        
+           // Reduce to shared memory by warp
         /*
  	int tgx = idx & cData.warpmask;
         WARPMINIMUM2(tgx, energy, bestID);
@@ -122,13 +127,13 @@ void gpu_gen_and_eval_newpops(
         */
 //--- thread barrier
         
-        // Copy best genome to next generation
-        int dOffset = blockIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
-        int sOffset = sBestID[0] * GENOTYPE_LENGTH_IN_GLOBMEM;
-        for (int i = idx ; i < cData.dockpars.num_of_genes; i += blockDim)
-        {
-            pMem_conformations_next[dOffset + i] = pMem_conformations_current[sOffset + i];
-        }
+            // Copy best genome to next generation
+            int dOffset = teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
+            int sOffset = sBestID[0] * GENOTYPE_LENGTH_IN_GLOBMEM;
+            for (int i = threadIdx ; i < cData.dockpars.num_of_genes; i += blockDim)
+            {
+                pMem_conformations_next[dOffset + i] = pMem_conformations_current[sOffset + i];
+            }
 	}
 	else
 	{
@@ -136,54 +141,54 @@ void gpu_gen_and_eval_newpops(
 		// [0..3] for parent candidates,
 		// [4..5] for binary tournaments, [6] for deciding crossover,
 		// [7..8] for crossover points, [9] for local search
-		for (uint32_t gene_counter = idx;
+		for (uint32_t gene_counter = threadIdx;
 		     gene_counter < 10;
 		     gene_counter += blockDim) {
-			 randnums[gene_counter] = gpu_randf(cData.pMem_prng_states, blockIdx, idx);
+			 randnums[gene_counter] = gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx);
 		}
 #if 0
-        if ((idx == 0) && (blockIdx == 1))
+        if ((threadIdx == 0) && (teamIdx == 1))
         {
-            printf("%06d ", blockIdx);
+            printf("%06d ", teamIdx);
             for (int i = 0; i < 10; i++)
                 printf("%12.6f ", randnums[i]);
             printf("\n");
         }
 #endif
 		// Determining run ID
-        run_id = blockIdx / cData.dockpars.pop_size;
+        run_id = teamIdx / cData.dockpars.pop_size;
 //--- thread barrier
 
 
-		if (idx < 4)	//it is not ensured that the four candidates will be different...
+		if (threadIdx < 4)	//it is not ensured that the four candidates will be different...
 		{
-			parent_candidates[idx]  = (int) (cData.dockpars.pop_size*randnums[idx]); //using randnums[0..3]
-			candidate_energies[idx] = pMem_energies_current[run_id*cData.dockpars.pop_size+parent_candidates[idx]];
+			parent_candidates[threadIdx]  = (int) (cData.dockpars.pop_size*randnums[threadIdx]); //using randnums[0..3]
+			candidate_energies[threadIdx] = pMem_energies_current[run_id*cData.dockpars.pop_size+parent_candidates[threadIdx]];
 		}
 //--- thread barrier
 
-		if (idx < 2) 
+		if (threadIdx < 2) 
 		{
 			// Notice: dockpars_tournament_rate was scaled down to [0,1] in host
 			// to reduce number of operations in device
-			if (candidate_energies[2*idx] < candidate_energies[2*idx+1])
-            {
-				if (/*100.0f**/randnums[4+idx] < cData.dockpars.tournament_rate) {		//using randnum[4..5]
-					parents[idx] = parent_candidates[2*idx];
+			if (candidate_energies[2*threadIdx] < candidate_energies[2*threadIdx+1])
+                        {
+				if (/*100.0f**/randnums[4+threadIdx] < cData.dockpars.tournament_rate) {		//using randnum[4..5]
+					parents[threadIdx] = parent_candidates[2*threadIdx];
 				}
 				else {
-					parents[idx] = parent_candidates[2*idx+1];
+					parents[threadIdx] = parent_candidates[2*threadIdx+1];
 				}
-            }
+                        }
 			else
-            {
-				if (/*100.0f**/randnums[4+idx] < cData.dockpars.tournament_rate) {
-					parents[idx] = parent_candidates[2*idx+1];
+                        {
+				if (/*100.0f**/randnums[4+threadIdx] < cData.dockpars.tournament_rate) {
+					parents[threadIdx] = parent_candidates[2*threadIdx+1];
 				}
 				else {
-					parents[idx] = parent_candidates[2*idx];
+					parents[threadIdx] = parent_candidates[2*threadIdx];
 				}
-            }
+                       }
 		}
 //--- thread barrier
 
@@ -192,14 +197,14 @@ void gpu_gen_and_eval_newpops(
 		// to reduce number of operations in device
 		if (/*100.0f**/randnums[6] < cData.dockpars.crossover_rate)	// Using randnums[6]
 		{
-			if (idx < 2) {
+			if (threadIdx < 2) {
 				// Using randnum[7..8]
-				covr_point[idx] = (int) ((cData.dockpars.num_of_genes-1)*randnums[7+idx]);
+				covr_point[threadIdx] = (int) ((cData.dockpars.num_of_genes-1)*randnums[7+threadIdx]);
 			}
 //--- thread barrier
 			
 			// covr_point[0] should store the lower crossover-point
-			if (idx == 0) {
+			if (threadIdx == 0) {
 				if (covr_point[1] < covr_point[0]) {
 					temp_covr_point = covr_point[1];
 					covr_point[1]   = covr_point[0];
@@ -209,7 +214,7 @@ void gpu_gen_and_eval_newpops(
 
 //--- thread barrier
 
-			for (uint32_t gene_counter = idx;
+			for (uint32_t gene_counter = threadIdx;
 			     gene_counter < cData.dockpars.num_of_genes;
 			     gene_counter+= blockDim)
 			{
@@ -233,32 +238,32 @@ void gpu_gen_and_eval_newpops(
 		}
 		else	//no crossover
 		{
-            for (uint32_t gene_counter = idx;
+            		for (uint32_t gene_counter = threadIdx;
 			     gene_counter < cData.dockpars.num_of_genes;
 			     gene_counter+= blockDim)
-            {
-                offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*cData.dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter];
-            }
+            		{
+                		offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*cData.dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter];
+            		}
 		} // End of crossover
 
 //--- thread barrier
 
 		// Performing mutation
-		for (uint32_t gene_counter = idx;
+		for (uint32_t gene_counter = threadIdx;
 		     gene_counter < cData.dockpars.num_of_genes;
 		     gene_counter+= blockDim)
 		{
 			// Notice: dockpars_mutation_rate was scaled down to [0,1] in host
 			// to reduce number of operations in device
-			if (/*100.0f**/gpu_randf(cData.pMem_prng_states, blockIdx, idx) < cData.dockpars.mutation_rate)
+			if (/*100.0f**/gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx) < cData.dockpars.mutation_rate)
 			{
 				// Translation genes
 				if (gene_counter < 3) {
-					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dmov*(2*gpu_randf(cData.pMem_prng_states, blockIdx, idx)-1);
+					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dmov*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1);
 				}
 				// Orientation and torsion genes
 				else {
-					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dang*(2*gpu_randf(cData.pMem_prng_states, blockIdx, idx)-1);
+					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dang*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1);
 					map_angle(offspring_genotype[gene_counter]);
 				}
 
@@ -273,15 +278,15 @@ void gpu_gen_and_eval_newpops(
 			run_id,
 			calc_coords,
                 	&sFloatAccumulator,
-	        	idx,
+	        	threadIdx,
                 	threadsPerBlock,
 			cData
 		);
         
         
-        if (idx == 0) {
-            pMem_energies_next[blockIdx] = energy;
-            cData.pMem_evals_of_new_entities[blockIdx] = 1;
+        if (threadIdx == 0) {
+            pMem_energies_next[teamIdx] = energy;
+            cData.pMem_evals_of_new_entities[teamIdx] = 1;
 
 			#if defined (DEBUG_ENERGY_KERNEL4)
 			printf("%-18s [%-5s]---{%-5s}   [%-10.8f]---{%-10.8f}\n", "-ENERGY-KERNEL4-", "GRIDS", "INTRA", interE, intraE);
@@ -290,16 +295,16 @@ void gpu_gen_and_eval_newpops(
 
 
 		// Copying new offspring to next generation
-        for (uint32_t gene_counter = idx;
+        for (uint32_t gene_counter = threadIdx;
 		     gene_counter < cData.dockpars.num_of_genes;
 		     gene_counter+= blockDim)
         {
-            pMem_conformations_next[blockIdx * GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter] = offspring_genotype[gene_counter];
+            pMem_conformations_next[teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter] = offspring_genotype[gene_counter];
         }        
 
       }
-    }  //idx
-    }  //blockIdx
+    }  // End for a team
+    }  // End for a set of teams
 }
 
 

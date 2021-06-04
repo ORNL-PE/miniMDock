@@ -42,9 +42,12 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 {
 
     const int blockDim = nthreads;
-    #pragma omp target 
-    #pragma omp teams distribute num_teams(nblocks) thread_limit(nthreads)
-    for (int blockIdx = 0; blockIdx < nblocks; blockIdx++){	
+    #pragma omp target
+    #pragma omp teams num_teams(nblocks) thread_limit(nthreads) 
+    #pragma omp distribute
+    for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)	
+    {  //for teams
+
          float genotype_candidate[ACTUAL_GENOTYPE_LENGTH];
          float genotype_deviate  [ACTUAL_GENOTYPE_LENGTH];
          float genotype_bias     [ACTUAL_GENOTYPE_LENGTH];
@@ -62,23 +65,27 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
          #pragma omp parallel for\
               //private(scratchpad)\
               //allocator(omp_pteam_memalloc)
-         for (int idx = 0; idx < nthreads; idx++){
-              float candidate_energy;
+         for (int threadIdx = 0; threadIdx < nthreads; threadIdx++)
+         {  //for threads in a team
+
+              int teamIdx = omp_get_team_num();
+              //int threadIdx = omp_get_thread_num();
+	      float candidate_energy;
               int run_id;
 
 	// Determining run ID and entity ID
 	// Initializing offspring genotype
-              run_id = blockIdx / cData.dockpars.num_of_lsentities;
-	      if (idx == 0)
+              run_id = teamIdx / cData.dockpars.num_of_lsentities;
+	      if (threadIdx == 0)
 	      {
-                  entity_id = blockIdx % cData.dockpars.num_of_lsentities;
+                  entity_id = teamIdx % cData.dockpars.num_of_lsentities;
 
 		// Since entity 0 is the best one due to elitism,
 		// it should be subjected to random selection
 		if (entity_id == 0) {
 			// If entity 0 is not selected according to LS-rate,
 			// choosing an other entity
-			if (100.0f*gpu_randf(cData.pMem_prng_states, blockIdx, idx) > cData.dockpars.lsearch_rate) {
+			if (100.0f*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx) > cData.dockpars.lsearch_rate) {
 				entity_id = cData.dockpars.num_of_lsentities;					
 			}
 		}
@@ -92,7 +99,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 	      }
 //--- thread barrier
     size_t offset = (run_id * cData.dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
-	for (uint32_t gene_counter = idx;
+	for (uint32_t gene_counter = threadIdx;
 	     gene_counter < cData.dockpars.num_of_genes;
 	     gene_counter+= blockDim) {
         offspring_genotype[gene_counter] = pMem_conformations_next[offset + gene_counter];
@@ -108,12 +115,12 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 	while ((iteration_cnt < cData.dockpars.max_num_of_iters) && (rho > cData.dockpars.rho_lower_bound))
 	{
 		// New random deviate
-		for (uint32_t gene_counter = idx;
+		for (uint32_t gene_counter = threadIdx;
 		     gene_counter < cData.dockpars.num_of_genes;
 		     gene_counter+= blockDim)
 		{
 #ifdef SWAT3
-			genotype_deviate[gene_counter] = rho*(2*gpu_randf(cData.pMem_prng_states, blockIdx, idx)-1)*(gpu_randf(cData.pMem_prng_states, blockIdx, idx) < gene_scale);
+			genotype_deviate[gene_counter] = rho*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1)*(gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx) < gene_scale);
 
 			// Translation genes
 			if (gene_counter < 3) {
@@ -128,7 +135,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 				}
 			}
 #else
-			genotype_deviate[gene_counter] = rho*(2*gpu_randf(cData.pMem_prng_states, blockIdx, idx)-1)*(gpu_randf(cData.pMem_prng_states, blockIdx, idx)<0.3f);
+			genotype_deviate[gene_counter] = rho*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1)*(gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)<0.3f);
 
 			// Translation genes
 			if (gene_counter < 3) {
@@ -142,7 +149,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 		}
 
 		// Generating new genotype candidate
-		for (uint32_t gene_counter = idx;
+		for (uint32_t gene_counter = threadIdx;
 		     gene_counter < cData.dockpars.num_of_genes;
 		     gene_counter+= blockDim) {
 			   genotype_candidate[gene_counter] = offspring_genotype[gene_counter] + 
@@ -160,20 +167,20 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
                 run_id,
                 calc_coords,
                 &sFloatAccumulator,
-		idx,
+		threadIdx,
 	        nthreads,
 		cData
 				);
 		// =================================================================
 
-		if (idx == 0) {
+		if (threadIdx == 0) {
 			evaluation_cnt++;
 		}
 //--- thread barrier
 
 		if (candidate_energy < offspring_energy)	// If candidate is better, success
 		{
-			for (uint32_t gene_counter = idx;
+			for (uint32_t gene_counter = threadIdx;
 			     gene_counter < cData.dockpars.num_of_genes;
 			     gene_counter+= blockDim)
 			{
@@ -188,7 +195,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 			// used in the previous if condition
 //--- thread barrier
 
-			if (idx == 0)
+			if (threadIdx == 0)
 			{
 				offspring_energy = candidate_energy;
 				cons_succ++;
@@ -198,7 +205,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 		else	// If candidate is worser, check the opposite direction
 		{
 			// Generating the other genotype candidate
-			for (uint32_t gene_counter = idx;
+			for (uint32_t gene_counter = threadIdx;
 			     gene_counter < cData.dockpars.num_of_genes;
 			     gene_counter+= blockDim) {
 				   genotype_candidate[gene_counter] = offspring_genotype[gene_counter] - 
@@ -216,13 +223,13 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
                 	run_id,
                 	calc_coords,
                 	&sFloatAccumulator,
-	        	idx,
+	        	threadIdx,
                 	nthreads,
   			cData
             		);
 			// =================================================================
 
-			if (idx == 0) {
+			if (threadIdx == 0) {
 				evaluation_cnt++;
 
 				#if defined (DEBUG_ENERGY_KERNEL)
@@ -233,7 +240,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 
 			if (candidate_energy < offspring_energy) // If candidate is better, success
 			{
-				for (uint32_t gene_counter = idx;
+				for (uint32_t gene_counter = threadIdx;
 				     gene_counter < cData.dockpars.num_of_genes;
 			       	     gene_counter+= blockDim)
 				{
@@ -248,7 +255,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 				// used in the previous if condition
 //--- thread barrier
 
-				if (idx == 0)
+				if (threadIdx == 0)
 				{
 					offspring_energy = candidate_energy;
 					cons_succ++;
@@ -257,13 +264,13 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 			}
 			else	// Failure in both directions
 			{
-				for (uint32_t gene_counter = idx;
+				for (uint32_t gene_counter = threadIdx;
 				     gene_counter < cData.dockpars.num_of_genes;
 				     gene_counter+= blockDim)
 					   // Updating genotype_bias
 					   genotype_bias[gene_counter] = 0.5f*genotype_bias[gene_counter];
 
-				if (idx == 0)
+				if (threadIdx == 0)
 				{
 					cons_succ = 0;
 					cons_fail++;
@@ -272,7 +279,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 		}
 
 		// Changing rho if needed
-		if (idx == 0)
+		if (threadIdx == 0)
 		{
 			iteration_cnt++;
 
@@ -292,14 +299,14 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 	}
 
 	// Updating eval counter and energy
-	if (idx == 0) {
+	if (threadIdx == 0) {
 		cData.pMem_evals_of_new_entities[run_id*cData.dockpars.pop_size+entity_id] += evaluation_cnt;
 		pMem_energies_next[run_id*cData.dockpars.pop_size+entity_id] = offspring_energy;
 	}
 
 	// Mapping torsion angles and writing out results
         offset = (run_id*cData.dockpars.pop_size+entity_id)*GENOTYPE_LENGTH_IN_GLOBMEM;
-	for (uint32_t gene_counter = idx;
+	for (uint32_t gene_counter = threadIdx;
 	     gene_counter < cData.dockpars.num_of_genes;
 	     gene_counter+= blockDim) {
         if (gene_counter >= 3) {
@@ -308,8 +315,8 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
         pMem_conformations_next[offset + gene_counter] = offspring_genotype[gene_counter];
 	}
 
-    }// thread
-   }// block
+    }// End for a team of threads
+   }// End for a set of teams
 }
 
 
