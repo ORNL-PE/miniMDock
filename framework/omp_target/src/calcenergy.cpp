@@ -131,7 +131,7 @@ void gpu_calc_energy(
 
 	// Initializing gradients (forces) 
 	// Derived from autodockdev/maps.py
-	#pragma omp target teams distribute parallel for
+	#pragma omp parallel for
 	for (uint atom_id = idx;
 		  atom_id < cData.dockpars.num_of_atoms;
 		  atom_id+= blockDim) {
@@ -170,7 +170,7 @@ void gpu_calc_energy(
 	// ================================================
 	// CALCULATING ATOMIC POSITIONS AFTER ROTATIONS
 	// ================================================
-	#pragma omp target teams distribute parallel for
+	#pragma omp parallel for
 	for (uint rotation_counter  = idx;
 	          rotation_counter  < cData.dockpars.rotbondlist_length;
 	          rotation_counter += blockDim)
@@ -245,7 +245,7 @@ void gpu_calc_energy(
 	// ================================================
 	// CALCULATING INTERMOLECULAR ENERGY
 	// ================================================
-	#pragma omp target teams distribute parallel for
+	#pragma omp parallel for
 	for (uint atom_id = idx;
 	          atom_id < cData.dockpars.num_of_atoms;
 	          atom_id+= blockDim)
@@ -317,9 +317,6 @@ void gpu_calc_energy(
 		#endif
 	} // End atom_id for-loop (INTERMOLECULAR ENERGY)
 
-#if defined (DEBUG_ENERGY_KERNEL)
-    REDUCEFLOATSUM(interE, pFloatAccumulator)
-#endif
 
 	// In paper: intermolecular and internal energy calculation
 	// are independent from each other, -> NO BARRIER NEEDED
@@ -330,7 +327,7 @@ void gpu_calc_energy(
 	// ================================================
 	// CALCULATING INTRAMOLECULAR ENERGY
 	// ================================================
-	#pragma omp target teams distribute parallel for
+	#pragma omp parallel for
 	for (uint contributor_counter = idx;
 	          contributor_counter < cData.dockpars.num_of_intraE_contributors;
 	          contributor_counter += blockDim)

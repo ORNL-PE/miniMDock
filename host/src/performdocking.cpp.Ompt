@@ -167,6 +167,7 @@ void setup_gpu_for_docking(GpuData& cData, GpuTempData& tData)
 	exit(-1);
     }
     
+    //#pragma omp target device(0)
     #pragma omp target device(cData.devnum)
     printf("Using the accelerator GPU_%d", cData.devnum);
 
@@ -226,27 +227,33 @@ void setup_gpu_for_docking(GpuData& cData, GpuTempData& tData)
         status = cudaMalloc((void**)&(tData.pMem_fgrids), cData.preload_gridsize * (sizeof(float)) * (ATYPE_NUM+2));
 	RTERROR(status, "pMem_fgrids: failed to allocate GPU memory.\n");
     }*/
+ 
     size_t size_populations = MAX_NUM_OF_RUNS * MAX_POPSIZE * GENOTYPE_LENGTH_IN_GLOBMEM*sizeof(float);
     tData.pMem_conformations1 = (float*) calloc( size_populations, sizeof(*tData.pMem_conformations1));
     tData.pMem_conformations2 = (float*) calloc( size_populations, sizeof(*tData.pMem_conformations2));
-	size_t size_energies = MAX_POPSIZE * MAX_NUM_OF_RUNS * sizeof(float);
+    size_t size_energies = MAX_POPSIZE * MAX_NUM_OF_RUNS * sizeof(float);
     tData.pMem_energies1 = (float*) calloc( size_energies, sizeof(*tData.pMem_energies1));
     tData.pMem_energies2 = (float*) calloc( size_energies, sizeof(*tData.pMem_energies2));
     tData.pMem_evals_of_new_entities = (int*) calloc( MAX_POPSIZE*MAX_NUM_OF_RUNS*sizeof(int), sizeof(*tData.pMem_evals_of_new_entities));
 
-	size_t size_evals_of_runs = MAX_NUM_OF_RUNS*sizeof(int);
+    #pragma omp target enter data map(to: tData.pMem_conformations1, tData.pMem_conformations2, tData.pMem_energies1, tData.pMem_energies2, tData.pMem_evals_of_new_entities)
+
+    size_t size_evals_of_runs = MAX_NUM_OF_RUNS*sizeof(int);
     //--- Have to be changed to unified memory
    //#pragma omp requires unified_shared_memory
    { 
-    tData.pMem_gpu_evals_of_runs = (int*) calloc( size_evals_of_runs, sizeof(tData.pMem_gpu_evals_of_runs));
+    tData.pMem_gpu_evals_of_runs = (int*) calloc( size_evals_of_runs, sizeof(*tData.pMem_gpu_evals_of_runs));
     #pragma omp target enter data map(to: tData.pMem_gpu_evals_of_runs)
    }
-	size_t blocksPerGridForEachEntity = MAX_POPSIZE * MAX_NUM_OF_RUNS;
-	size_t size_prng_seeds = blocksPerGridForEachEntity * NUM_OF_THREADS_PER_BLOCK * sizeof(unsigned int);
-    tData.pMem_prng_states = (uint32_t *) calloc(size_prng_seeds, sizeof(tData.pMem_prng_states));
+
+    size_t blocksPerGridForEachEntity = MAX_POPSIZE * MAX_NUM_OF_RUNS;
+    size_t size_prng_seeds = blocksPerGridForEachEntity * NUM_OF_THREADS_PER_BLOCK * sizeof(unsigned int);
+   // tData.pMem_prng_states = (uint32_t *) calloc(size_prng_seeds, sizeof(*tData.pMem_prng_states));
+    tData.pMem_prng_states = (unsigned int *) calloc(size_prng_seeds, sizeof(*tData.pMem_prng_states));
     
-    #pragma omp target enter data map(to: tData.pMem_conformations1, tData.pMem_conformations2, tData.pMem_energies1, tData.pMem_energies2, \
-     tData.pMem_evals_of_new_entities, tData.pMem_prng_states )
+    #pragma omp target enter data map(to: tData.pMem_prng_states )
+    //#pragma omp target enter data map(to: tData.pMem_conformations1, tData.pMem_conformations2, tData.pMem_energies1, tData.pMem_energies2, \
+    //tData.pMem_evals_of_new_entities, tData.pMem_prng_states )
 
 }
 void finish_gpu_from_docking(GpuData& cData, GpuTempData& tData)
@@ -440,13 +447,17 @@ filled with clock() */
     cData.pKerconst_conform = &KerConst_conform;
 
     #pragma omp target enter data map(to: cData.pKerconst_interintra, cData.pKerconst_intracontrib, cData.pKerconst_intra, cData.pKerconst_rotlist, cData.pKerconst_conform)
+ 
+    cData.pMem_rotbonds_const = KerConst_grads.rotbonds;
+    cData.pMem_rotbonds_atoms_const = KerConst_grads.rotbonds_atoms;
+    cData.pMem_num_rotating_atoms_per_rotbond_const = KerConst_grads.num_rotating_atoms_per_rotbond;
 
     //allocating GPU memory for populations, floatgirds,
     //energies, evaluation counters and random number generator states
     size_floatgrids = 4 * (sizeof(float)) * (mygrid->num_of_atypes+2) * (mygrid->size_xyz[0]) * (mygrid->size_xyz[1]) * (mygrid->size_xyz[2]);    
     //if(cData.preload_gridsize==0){
-    	tData.pMem_fgrids = (float*) calloc( size_floatgrids, sizeof(tData.pMem_fgrids) );
-    //    #pragma omp target enter data map(to: tData.pMem_fgrids)
+    	tData.pMem_fgrids = (float*) calloc( size_floatgrids, sizeof(*tData.pMem_fgrids) );
+        #pragma omp target enter data map(to: tData.pMem_fgrids)
    // }
 
     // Flippable pointers
@@ -454,20 +465,21 @@ filled with clock() */
     float* pMem_conformations_next = tData.pMem_conformations2;
     float* pMem_energies_current = tData.pMem_energies1;
     float* pMem_energies_next = tData.pMem_energies2;
-    
+ 
     // Set constant pointers
     cData.pMem_fgrids = tData.pMem_fgrids;
     cData.pMem_evals_of_new_entities = tData.pMem_evals_of_new_entities;
     cData.pMem_gpu_evals_of_runs = tData.pMem_gpu_evals_of_runs;
     cData.pMem_prng_states = tData.pMem_prng_states;
-    
+    #pragma omp target enter data map(to: cData.pMem_fgrids, cData.pMem_evals_of_new_entities,  cData.pMem_gpu_evals_of_runs, cData.pMem_prng_states)  
+ 
     tData.pMem_fgrids = cpu_floatgrids;
-    pMem_conformations_current = cpu_init_populations;
     tData.pMem_gpu_evals_of_runs = sim_state.cpu_evals_of_runs.data();
     tData.pMem_prng_states = cpu_prng_seeds;
 
     // Upload data
-    #pragma omp target enter data map(to: tData.pMem_fgrids, pMem_conformations_current, tData.pMem_gpu_evals_of_runs, tData.pMem_prng_states)
+    pMem_conformations_current = cpu_init_populations;
+    #pragma omp target enter data map(to: pMem_conformations_current, pMem_conformations_next, pMem_energies_current, pMem_energies_next)
     //if(!floatgrids_preloaded){
     //}
 
@@ -519,6 +531,7 @@ filled with clock() */
 		//blocksPerGridForEachGradMinimizerEntity = mypars->num_of_runs;
 	}
 
+       #pragma omp target enter data map(to: cData.dockpars)       
 	
 	char method_chosen[64]; // 64 chars will be enough for this message as mypars->ls_method is 4 chars at the longest
 	if(strcmp(mypars->ls_method, "sw") == 0){
@@ -608,6 +621,7 @@ filled with clock() */
 		printf("%-25s", "\tK_INIT");fflush(stdout);
         cudaDeviceSynchronize();
 	#endif
+
     gpu_calc_initpop(kernel1_gxsize, kernel1_lxsize, pMem_conformations_current, pMem_energies_current, cData);
 	//runKernel1D(command_queue,kernel1,kernel1_gxsize,kernel1_lxsize,&time_start_kernel,&time_end_kernel);
 	#ifdef DOCK_DEBUG
@@ -621,7 +635,8 @@ filled with clock() */
 		printf("%-25s", "\tK_EVAL");fflush(stdout);
 	#endif
 	//runKernel1D(command_queue,kernel2,kernel2_gxsize,kernel2_lxsize,&time_start_kernel,&time_end_kernel);
-    gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData);
+// /* 
+   gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData);
 	#ifdef DOCK_DEBUG
         cudaDeviceSynchronize();
 		printf("%15s" ," ... Finished\n");fflush(stdout);
@@ -655,10 +670,12 @@ filled with clock() */
 	unsigned int avg_arr_size = (Ntop+1)*3;
 	float average_sd2_N[avg_arr_size];
 	unsigned long total_evals;
+//*/
 /*
 	auto const t2 = std::chrono::steady_clock::now();
 	printf("\nRest of Setup time %fs\n", elapsed_seconds(t1 ,t2));
 */
+///*
 	//print progress bar
 	AutoStop autostop(mypars->pop_size, mypars->num_of_runs, mypars->stopstd, mypars->as_frequency);
 #ifndef DOCK_DEBUG
@@ -782,11 +799,12 @@ filled with clock() */
 			fflush(stdout);
 		#endif
 	} // End of while-loop
+//*/
 /*
     auto const t3 = std::chrono::steady_clock::now();
     printf("\nDocking time %fs\n", elapsed_seconds(t2, t3));
 */
-
+///*
 	clock_stop_docking = clock();
 	if (mypars->autostop==0)
 	{
@@ -823,11 +841,10 @@ filled with clock() */
 	sim_state.myligand_reference = myligand_reference;
 	sim_state.generation_cnt = generation_cnt;
 	sim_state.sec_per_run = ELAPSEDSECS(clock_stop_docking, clock_start_docking)/mypars->num_of_runs;
-	sim_state.total_evals = total_evals;
-
-    
+	sim_state.total_evals = total_evals;  
     
 	free(cpu_prng_seeds);
+//*/
 /*
     auto const t4 = std::chrono::steady_clock::now();
     printf("\nShutdown time %fs\n", elapsed_seconds(t3, t4));
