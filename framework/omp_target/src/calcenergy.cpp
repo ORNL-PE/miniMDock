@@ -128,10 +128,9 @@ void gpu_calc_energy(
     float interE = 0.0f;
     float intraE = 0.0f;
 #endif
-
 	// Initializing gradients (forces) 
 	// Derived from autodockdev/maps.py
-	#pragma omp parallel for
+//	#pragma omp parallel for
 	for (uint atom_id = idx;
 		  atom_id < cData.dockpars.num_of_atoms;
 		  atom_id+= blockDim) {
@@ -163,14 +162,13 @@ void gpu_calc_energy(
 	uint g1 = cData.dockpars.gridsize_x;
 	uint g2 = cData.dockpars.gridsize_x_times_y;
 	uint g3 = cData.dockpars.gridsize_x_times_y_times_z;
-
+        
     //__threadfence();
     //__syncthreads();
-
 	// ================================================
 	// CALCULATING ATOMIC POSITIONS AFTER ROTATIONS
 	// ================================================
-	#pragma omp parallel for
+//	#pragma omp parallel for
 	for (uint rotation_counter  = idx;
 	          rotation_counter  < cData.dockpars.rotbondlist_length;
 	          rotation_counter += blockDim)
@@ -183,28 +181,29 @@ void gpu_calc_energy(
 
 			// Capturing atom coordinates
 			float4 atom_to_rotate;
-            atom_to_rotate.x = calc_coords[atom_id].x;
-            atom_to_rotate.y = calc_coords[atom_id].y;
-            atom_to_rotate.z = calc_coords[atom_id].z;
-            atom_to_rotate.w = 0.0f;
+                        atom_to_rotate.x = calc_coords[atom_id].x;
+                        atom_to_rotate.y = calc_coords[atom_id].y;
+            		atom_to_rotate.z = calc_coords[atom_id].z;
+            		atom_to_rotate.w = 0.0f;
 
 			// initialize with general rotation values
 			float4 rotation_unitvec = genrot_unitvec;
 			float4 rotation_movingvec = genrot_movingvec;
 
+        printf(" 2... g1: %d \t g2: %d \t g3: %d \n", g1, g2, g3);
 			if ((rotation_list_element & RLIST_GENROT_MASK) == 0) // If rotating around rotatable bond
 			{
 				uint rotbond_id = (rotation_list_element & RLIST_RBONDID_MASK) >> RLIST_RBONDID_SHIFT;
 
 				float rotation_angle = pGenotype[6+rotbond_id]*DEG_TO_RAD*0.5f;
 				float s = sin(rotation_angle);
-                rotation_unitvec.x = s*cData.pKerconst_conform->rotbonds_unit_vectors_const[3*rotbond_id];
-                rotation_unitvec.y = s*cData.pKerconst_conform->rotbonds_unit_vectors_const[3*rotbond_id+1];
-                rotation_unitvec.z = s*cData.pKerconst_conform->rotbonds_unit_vectors_const[3*rotbond_id+2];
-                rotation_unitvec.w = cos(rotation_angle);
-                rotation_movingvec.x = cData.pKerconst_conform->rotbonds_moving_vectors_const[3*rotbond_id];
-                rotation_movingvec.y = cData.pKerconst_conform->rotbonds_moving_vectors_const[3*rotbond_id+1];
-                rotation_movingvec.z = cData.pKerconst_conform->rotbonds_moving_vectors_const[3*rotbond_id+2];
+                		rotation_unitvec.x = s*cData.pKerconst_conform->rotbonds_unit_vectors_const[3*rotbond_id];
+                		rotation_unitvec.y = s*cData.pKerconst_conform->rotbonds_unit_vectors_const[3*rotbond_id+1];
+                		rotation_unitvec.z = s*cData.pKerconst_conform->rotbonds_unit_vectors_const[3*rotbond_id+2];
+                		rotation_unitvec.w = cos(rotation_angle);
+                		rotation_movingvec.x = cData.pKerconst_conform->rotbonds_moving_vectors_const[3*rotbond_id];
+                		rotation_movingvec.y = cData.pKerconst_conform->rotbonds_moving_vectors_const[3*rotbond_id+1];
+                		rotation_movingvec.z = cData.pKerconst_conform->rotbonds_moving_vectors_const[3*rotbond_id+2];
                 
 				// Performing additionally the first movement which
 				// is needed only if rotating around rotatable bond
@@ -245,7 +244,7 @@ void gpu_calc_energy(
 	// ================================================
 	// CALCULATING INTERMOLECULAR ENERGY
 	// ================================================
-	#pragma omp parallel for
+//	#pragma omp parallel for
 	for (uint atom_id = idx;
 	          atom_id < cData.dockpars.num_of_atoms;
 	          atom_id+= blockDim)
@@ -327,7 +326,7 @@ void gpu_calc_energy(
 	// ================================================
 	// CALCULATING INTRAMOLECULAR ENERGY
 	// ================================================
-	#pragma omp parallel for
+//	#pragma omp parallel for
 	for (uint contributor_counter = idx;
 	          contributor_counter < cData.dockpars.num_of_intraE_contributors;
 	          contributor_counter += blockDim)
@@ -442,7 +441,6 @@ void gpu_calc_energy(
 		// ------------------------------------------------
 
 	} // End contributor_counter for-loop (INTRAMOLECULAR ENERGY)
-
 
 	// reduction to calculate energy
 }

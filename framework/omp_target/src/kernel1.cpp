@@ -24,7 +24,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "kernels.hpp"
 #include "calcenergy.hpp"
 
-void gpu_calc_initpop(uint32_t nblocks, uint32_t threadsPerBlock, float* pMem_conformations_current, float* pMem_energies_current, GpuData& cData)
+
+void gpu_calc_initpop(	uint32_t nblocks, 
+			uint32_t threadsPerBlock, 
+			float* pMem_conformations_current, 
+			float* pMem_energies_current, 
+			GpuData& cData )
 {
 
     #pragma omp target 
@@ -46,17 +51,16 @@ void gpu_calc_initpop(uint32_t nblocks, uint32_t threadsPerBlock, float* pMem_co
             //int threadIdx = omp_get_thread_num();
             int run_id = teamIdx / cData.dockpars.pop_size;
             float* pGenotype = pMem_conformations_current + teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
-//            printf("team %d \t thread %d \t run %d \t blocks %d \t threads %d \n", teamIdx, threadIdx, run_id, nblocks, threadsPerBlock);
 	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, &sFloatAccumulator, threadIdx, threadsPerBlock, cData );
 	
             // Write out final energy
             if (threadIdx == 0){
-//                pMem_energies_current[0] = energy;
                 pMem_energies_current[teamIdx] = energy;
                 cData.pMem_evals_of_new_entities[teamIdx] = 1;
 	    }
 
         }// End for a team 
     }// End for a set of teams
+
 }
 
