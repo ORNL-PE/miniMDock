@@ -29,8 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 static const float MAXENERGY = FLT_MAX / 100.0; // Used to cap absurd energies so placeholder energy is always skipped in sorts
 
-typedef struct
-{
+struct GpuDockparameters{
         int             num_of_atoms;
         int             num_of_atypes;
 	int		num_of_map_atypes;
@@ -60,15 +59,12 @@ typedef struct
         unsigned int    cons_limit;
         unsigned int    max_num_of_iters;
         float           qasp;
-        float           adam_beta1;
-        float           adam_beta2;
-        float           adam_epsilon;
-} GpuDockparameters;
+};
 
 struct GpuData {
         int             devnum;
         int             preload_gridsize;
-    GpuDockparameters               dockpars;
+  //    GpuDockparameters               dockpars;
     
     // Consolidated constants and memory pointers to reduce kernel launch overhead
     kernelconstant_interintra*      pKerconst_interintra;
@@ -87,10 +83,6 @@ struct GpuData {
     float*                          pMem_angle_const;
     float*                          pMem_dependence_on_theta_const;
     float*                          pMem_dependence_on_rotangle_const;
-    
-    // CUDA-specific constants
-    unsigned int                    warpmask;
-    unsigned int                    warpbits;
 };
 
 struct GpuTempData {

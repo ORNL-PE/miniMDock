@@ -29,7 +29,8 @@ void gpu_calc_initpop(	uint32_t nblocks,
 			uint32_t threadsPerBlock, 
 			float* pMem_conformations_current, 
 			float* pMem_energies_current, 
-			GpuData& cData )
+			GpuData& cData,
+			GpuDockparameters dockpars )
 {
 
     #pragma omp target 
@@ -49,9 +50,9 @@ void gpu_calc_initpop(	uint32_t nblocks,
             int teamIdx = omp_get_team_num();
             int threadIdx = idx;
             //int threadIdx = omp_get_thread_num();
-            int run_id = teamIdx / cData.dockpars.pop_size;
+            int run_id = teamIdx / dockpars.pop_size;
             float* pGenotype = pMem_conformations_current + teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
-	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, &sFloatAccumulator, threadIdx, threadsPerBlock, cData );
+	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, &sFloatAccumulator, threadIdx, threadsPerBlock, cData, dockpars );
 	
             // Write out final energy
             if (threadIdx == 0){

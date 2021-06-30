@@ -42,13 +42,15 @@ void gpu_calc_initpop(
      uint32_t threadsPerBlock, 
      float* pConformations_current, 
      float* pEnergies_current,
-     GpuData& cData
+     GpuData& cData,
+     GpuDockparameters dockpars
      );
 
 void gpu_sum_evals(
      uint32_t blocks, 
      uint32_t threadsPerBlock,
-     GpuData& cData
+     GpuData& cData,
+     GpuDockparameters dockpars
      );
 
 void gpu_perform_LS( 
@@ -56,7 +58,8 @@ void gpu_perform_LS(
      uint32_t nthreads, 
      float* pMem_conformations_next, 
      float* pMem_energies_next,
-     GpuData& cData 
+     GpuData& cData,
+     GpuDockparameters dockpars 
      );
 
 void gpu_gen_and_eval_newpops(
@@ -66,7 +69,8 @@ void gpu_gen_and_eval_newpops(
     float* pMem_energies_current,
     float* pMem_conformations_next,
     float* pMem_energies_next,
-    GpuData& cData
+    GpuData& cData,
+    GpuDockparameters dockpars
     );
 
 

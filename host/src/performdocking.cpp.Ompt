@@ -546,56 +546,58 @@ filled with clock() */
     //}
 
 	//preparing parameter struct
-	cData.dockpars.num_of_atoms                 = myligand_reference.num_of_atoms;
-	cData.dockpars.num_of_atypes                = myligand_reference.num_of_atypes;
-	cData.dockpars.num_of_map_atypes	    = mygrid->num_of_map_atypes;
-	cData.dockpars.num_of_intraE_contributors   = ((int) myligand_reference.num_of_intraE_contributors);
-	cData.dockpars.gridsize_x                   = mygrid->size_xyz[0];
-	cData.dockpars.gridsize_y                   = mygrid->size_xyz[1];
-	cData.dockpars.gridsize_z                   = mygrid->size_xyz[2];
-        cData.dockpars.gridsize_x_times_y           = cData.dockpars.gridsize_x * cData.dockpars.gridsize_y; 
-        cData.dockpars.gridsize_x_times_y_times_z   = cData.dockpars.gridsize_x * cData.dockpars.gridsize_y * cData.dockpars.gridsize_z;     
-	cData.dockpars.grid_spacing                 = ((float) mygrid->spacing);
-	cData.dockpars.rotbondlist_length           = ((int) NUM_OF_THREADS_PER_BLOCK*(myligand_reference.num_of_rotcyc));
-	cData.dockpars.coeff_elec                   = ((float) mypars->coeffs.scaled_AD4_coeff_elec);
-	cData.dockpars.coeff_desolv                 = ((float) mypars->coeffs.AD4_coeff_desolv);
-	cData.dockpars.pop_size                     = mypars->pop_size;
-	cData.dockpars.num_of_genes                 = myligand_reference.num_of_rotbonds + 6;
+        GpuDockparameters dockpars;
+
+	dockpars.num_of_atoms                 = myligand_reference.num_of_atoms;
+	dockpars.num_of_atypes                = myligand_reference.num_of_atypes;
+	dockpars.num_of_map_atypes	    = mygrid->num_of_map_atypes;
+	dockpars.num_of_intraE_contributors   = ((int) myligand_reference.num_of_intraE_contributors);
+	dockpars.gridsize_x                   = mygrid->size_xyz[0];
+	dockpars.gridsize_y                   = mygrid->size_xyz[1];
+	dockpars.gridsize_z                   = mygrid->size_xyz[2];
+        dockpars.gridsize_x_times_y           = dockpars.gridsize_x * dockpars.gridsize_y; 
+        dockpars.gridsize_x_times_y_times_z   = dockpars.gridsize_x * dockpars.gridsize_y * dockpars.gridsize_z;     
+	dockpars.grid_spacing                 = ((float) mygrid->spacing);
+	dockpars.rotbondlist_length           = ((int) NUM_OF_THREADS_PER_BLOCK*(myligand_reference.num_of_rotcyc));
+	dockpars.coeff_elec                   = ((float) mypars->coeffs.scaled_AD4_coeff_elec);
+	dockpars.coeff_desolv                 = ((float) mypars->coeffs.AD4_coeff_desolv);
+	dockpars.pop_size                     = mypars->pop_size;
+	dockpars.num_of_genes                 = myligand_reference.num_of_rotbonds + 6;
 	// Notice: dockpars.tournament_rate, dockpars.crossover_rate, dockpars.mutation_rate
 	// were scaled down to [0,1] in host to reduce number of operations in device
-	cData.dockpars.tournament_rate              = mypars->tournament_rate/100.0f; 
-	cData.dockpars.crossover_rate               = mypars->crossover_rate/100.0f;
-	cData.dockpars.mutation_rate                = mypars->mutation_rate/100.f;
-	cData.dockpars.abs_max_dang                 = mypars->abs_max_dang;
-	cData.dockpars.abs_max_dmov                 = mypars->abs_max_dmov;
-	cData.dockpars.qasp 		                = mypars->qasp;
-	cData.dockpars.smooth 	                    = mypars->smooth;
-	cData.dockpars.lsearch_rate                 = mypars->lsearch_rate;
+	dockpars.tournament_rate              = mypars->tournament_rate/100.0f; 
+	dockpars.crossover_rate               = mypars->crossover_rate/100.0f;
+	dockpars.mutation_rate                = mypars->mutation_rate/100.f;
+	dockpars.abs_max_dang                 = mypars->abs_max_dang;
+	dockpars.abs_max_dmov                 = mypars->abs_max_dmov;
+	dockpars.qasp 		                = mypars->qasp;
+	dockpars.smooth 	                    = mypars->smooth;
+	dockpars.lsearch_rate                 = mypars->lsearch_rate;
 
-	if (cData.dockpars.lsearch_rate != 0.0f) 
+	if (dockpars.lsearch_rate != 0.0f) 
 	{
-		cData.dockpars.num_of_lsentities        = (unsigned int) (mypars->lsearch_rate/100.0*mypars->pop_size + 0.5);
-		cData.dockpars.rho_lower_bound          = mypars->rho_lower_bound;
-		cData.dockpars.base_dmov_mul_sqrt3      = mypars->base_dmov_mul_sqrt3;
-		cData.dockpars.base_dang_mul_sqrt3      = mypars->base_dang_mul_sqrt3;
-		cData.dockpars.cons_limit               = (unsigned int) mypars->cons_limit;
-		cData.dockpars.max_num_of_iters         = (unsigned int) mypars->max_num_of_iters;
+		dockpars.num_of_lsentities        = (unsigned int) (mypars->lsearch_rate/100.0*mypars->pop_size + 0.5);
+		dockpars.rho_lower_bound          = mypars->rho_lower_bound;
+		dockpars.base_dmov_mul_sqrt3      = mypars->base_dmov_mul_sqrt3;
+		dockpars.base_dang_mul_sqrt3      = mypars->base_dang_mul_sqrt3;
+		dockpars.cons_limit               = (unsigned int) mypars->cons_limit;
+		dockpars.max_num_of_iters         = (unsigned int) mypars->max_num_of_iters;
 
 		// The number of entities that undergo Solis-Wets minimization,
-		blocksPerGridForEachLSEntity = cData.dockpars.num_of_lsentities * mypars->num_of_runs;
+		blocksPerGridForEachLSEntity = dockpars.num_of_lsentities * mypars->num_of_runs;
 
 		// The number of entities that undergo any gradient-based minimization,
 		// by default, it is the same as the number of entities that undergo the Solis-Wets minimizer
-		blocksPerGridForEachGradMinimizerEntity = cData.dockpars.num_of_lsentities * mypars->num_of_runs;
+		blocksPerGridForEachGradMinimizerEntity = dockpars.num_of_lsentities * mypars->num_of_runs;
 
 		// Enable only for debugging.
 		// Only one entity per reach run, undergoes gradient minimization
 		//blocksPerGridForEachGradMinimizerEntity = mypars->num_of_runs;
 	}
 
-       #pragma omp target enter data map(to: cData.dockpars)       
+       #pragma omp target enter data map(to: dockpars)       
 	
-	char method_chosen[64]; // 64 chars will be enough for this message as mypars->ls_method is 4 chars at the longest
+        char method_chosen[64]; // 64 chars will be enough for this message as mypars->ls_method is 4 chars at the longest
 	if(strcmp(mypars->ls_method, "sw") == 0){
 		strcpy(method_chosen,"Solis-Wets (sw)");
 	}
@@ -603,7 +605,7 @@ filled with clock() */
 		printf("Error: LS method %s is not (yet) supported in the Cuda version.\n",mypars->ls_method);
 		exit(-1);
 	}
-	printf("Local-search chosen method is: %s\n", (cData.dockpars.lsearch_rate == 0.0f)? "GA" : method_chosen);
+	printf("Local-search chosen method is: %s\n", (dockpars.lsearch_rate == 0.0f)? "GA" : method_chosen);
 
 	if((mypars->initial_sw_generations>0) && (strcmp(mypars->ls_method, "sw") != 0))
 		printf("Using Solis-Wets (sw) for the first %d generations.\n",mypars->initial_sw_generations);
@@ -664,7 +666,7 @@ filled with clock() */
 	// End of Kernel4
 
     uint32_t kernel3_gxsize, kernel3_lxsize;
-	if (cData.dockpars.lsearch_rate != 0.0f) {
+	if (dockpars.lsearch_rate != 0.0f) {
 
 		if ((strcmp(mypars->ls_method, "sw") == 0) || (mypars->initial_sw_generations>0)) {
 			// Kernel3
@@ -683,7 +685,7 @@ filled with clock() */
 		printf("%-25s", "\tK_INIT");fflush(stdout);
         cudaDeviceSynchronize();
 	#endif
-    gpu_calc_initpop(kernel1_gxsize, kernel1_lxsize, pMem_conformations_current, pMem_energies_current, cData);
+    gpu_calc_initpop(kernel1_gxsize, kernel1_lxsize, pMem_conformations_current, pMem_energies_current, cData, dockpars);
     //gpu_calc_initpop(kernel1_gxsize, kernel1_lxsize, pMem_conformations_current, pMem_energies_current, cData.pMem_evals_of_new_entities, cData);
 	//runKernel1D(command_queue,kernel1,kernel1_gxsize,kernel1_lxsize,&time_start_kernel,&time_end_kernel);
 	#ifdef DOCK_DEBUG
@@ -697,8 +699,8 @@ filled with clock() */
 		printf("%-25s", "\tK_EVAL");fflush(stdout);
 	#endif
 	//runKernel1D(command_queue,kernel2,kernel2_gxsize,kernel2_lxsize,&time_start_kernel,&time_end_kernel);
- /* 
-   gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData);
+ 
+   gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData, dockpars);
 	#ifdef DOCK_DEBUG
         cudaDeviceSynchronize();
 		printf("%15s" ," ... Finished\n");fflush(stdout);
@@ -732,12 +734,12 @@ filled with clock() */
 	unsigned int avg_arr_size = (Ntop+1)*3;
 	float average_sd2_N[avg_arr_size];
 	unsigned long total_evals;
-*/
+
 /*
 	auto const t2 = std::chrono::steady_clock::now();
 	printf("\nRest of Setup time %fs\n", elapsed_seconds(t1 ,t2));
 */
-/*
+
 	//print progress bar
 	AutoStop autostop(mypars->pop_size, mypars->num_of_runs, mypars->stopstd, mypars->as_frequency);
 #ifndef DOCK_DEBUG
@@ -791,19 +793,19 @@ filled with clock() */
 		#endif
         
 		//runKernel1D(command_queue,kernel4,kernel4_gxsize,kernel4_lxsize,&time_start_kernel,&time_end_kernel);
-        gpu_gen_and_eval_newpops(kernel4_gxsize, kernel4_lxsize, pMem_conformations_current, pMem_energies_current, pMem_conformations_next, pMem_energies_next, cData);
+        gpu_gen_and_eval_newpops(kernel4_gxsize, kernel4_lxsize, pMem_conformations_current, pMem_energies_current, pMem_conformations_next, pMem_energies_next, cData, dockpars);
 		#ifdef DOCK_DEBUG
 			printf("%15s", " ... Finished\n");fflush(stdout);
 		#endif
 		// End of Kernel4
-		if (cData.dockpars.lsearch_rate != 0.0f) {
+		if (dockpars.lsearch_rate != 0.0f) {
 			if (strcmp(mypars->ls_method, "sw")  == 0 ) {
 				// Kernel3
 				#ifdef DOCK_DEBUG
 					printf("%-25s", "\tK_LS_SOLISWETS");fflush(stdout);
 				#endif
 				//runKernel1D(command_queue,kernel3,kernel3_gxsize,kernel3_lxsize,&time_start_kernel,&time_end_kernel);
-                gpu_perform_LS(kernel3_gxsize, kernel3_lxsize, pMem_conformations_next, pMem_energies_next, cData);                
+                gpu_perform_LS(kernel3_gxsize, kernel3_lxsize, pMem_conformations_next, pMem_energies_next, cData, dockpars);                
 				#ifdef DOCK_DEBUG
 					printf("%15s" ," ... Finished\n");fflush(stdout);
 				#endif
@@ -817,7 +819,7 @@ filled with clock() */
 			printf("%-25s", "\tK_EVAL");fflush(stdout);
 		#endif
 		//runKernel1D(command_queue,kernel2,kernel2_gxsize,kernel2_lxsize,&time_start_kernel,&time_end_kernel);
-        gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData);       
+        gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData, dockpars);       
         
 		#ifdef DOCK_DEBUG
 			printf("%15s" ," ... Finished\n");fflush(stdout);
@@ -861,12 +863,12 @@ filled with clock() */
 			fflush(stdout);
 		#endif
 	} // End of while-loop
-*/
+
 /*
     auto const t3 = std::chrono::steady_clock::now();
     printf("\nDocking time %fs\n", elapsed_seconds(t2, t3));
 */
-/*
+
 	clock_stop_docking = clock();
 	if (mypars->autostop==0)
 	{
@@ -883,7 +885,7 @@ filled with clock() */
 	// http://www.cc.gatech.edu/~vetter/keeneland/tutorial-2012-02-20/08-opencl.pdf
 	// ===============================================================================
 	//processing results
-    #pragma omp target exit data map(from: pMem_conformations_current[:size_population], pMem_energies_current[:size_energies]) 
+    #pragma omp target exit data map(from: pMem_conformations_current[:size_populations], pMem_energies_current[:size_energies]) 
     //#pragma omp target exit data map(from: cpu_final_populations, sim_state.cpu_energies.data()) 
 
     //JL TODO - Should the tData arrays be zeroed before the next run?
@@ -906,7 +908,7 @@ filled with clock() */
 	sim_state.total_evals = total_evals;  
     
 	free(cpu_prng_seeds);
-*/
+
 /*
     auto const t4 = std::chrono::steady_clock::now();
     printf("\nShutdown time %fs\n", elapsed_seconds(t3, t4));

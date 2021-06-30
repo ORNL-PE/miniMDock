@@ -11,7 +11,8 @@ void gpu_calc_energy(
     float* pFloatAccumulator,
     int idx,
     uint32_t blockDim,
-    GpuData& cData
+    GpuData& cData,
+    GpuDockparameters dockpars
 );
 #pragma omp end declare target
 

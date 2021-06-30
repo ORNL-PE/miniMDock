@@ -113,7 +113,8 @@ void gpu_calc_energy(
     float* pFloatAccumulator,
     int idx,
     uint32_t blockDim,
-    GpuData& cData
+    GpuData& cData,
+    GpuDockparameters dockpars
 ) 
 
 //The GPU device function calculates the energy of the entity described by genotype, dockpars and the liganddata
@@ -132,7 +133,7 @@ void gpu_calc_energy(
 	// Derived from autodockdev/maps.py
 //	#pragma omp parallel for
 	for (uint atom_id = idx;
-		  atom_id < cData.dockpars.num_of_atoms;
+		  atom_id < dockpars.num_of_atoms;
 		  atom_id+= blockDim) {
 		// Initialize coordinates
         calc_coords[atom_id].x = cData.pKerconst_conform->ref_coords_const[3*atom_id];
@@ -159,18 +160,19 @@ void gpu_calc_energy(
 	genrot_unitvec.z = s2*cos(theta);
 	genrot_unitvec.w = cos(genrotangle*0.5f);
 
-	uint g1 = cData.dockpars.gridsize_x;
-	uint g2 = cData.dockpars.gridsize_x_times_y;
-	uint g3 = cData.dockpars.gridsize_x_times_y_times_z;
+	uint g1 = dockpars.gridsize_x;
+	uint g2 = dockpars.gridsize_x_times_y;
+	uint g3 = dockpars.gridsize_x_times_y_times_z;
         
     //__threadfence();
     //__syncthreads();
+ 
 	// ================================================
 	// CALCULATING ATOMIC POSITIONS AFTER ROTATIONS
 	// ================================================
 //	#pragma omp parallel for
 	for (uint rotation_counter  = idx;
-	          rotation_counter  < cData.dockpars.rotbondlist_length;
+	          rotation_counter  < dockpars.rotbondlist_length;
 	          rotation_counter += blockDim)
 	{
 		int rotation_list_element = cData.pKerconst_rotlist->rotlist_const[rotation_counter];
@@ -190,7 +192,6 @@ void gpu_calc_energy(
 			float4 rotation_unitvec = genrot_unitvec;
 			float4 rotation_movingvec = genrot_movingvec;
 
-        printf(" 2... g1: %d \t g2: %d \t g3: %d \n", g1, g2, g3);
 			if ((rotation_list_element & RLIST_GENROT_MASK) == 0) // If rotating around rotatable bond
 			{
 				uint rotbond_id = (rotation_list_element & RLIST_RBONDID_MASK) >> RLIST_RBONDID_SHIFT;
@@ -246,7 +247,7 @@ void gpu_calc_energy(
 	// ================================================
 //	#pragma omp parallel for
 	for (uint atom_id = idx;
-	          atom_id < cData.dockpars.num_of_atoms;
+	          atom_id < dockpars.num_of_atoms;
 	          atom_id+= blockDim)
 	{
 		uint atom_typeid = cData.pKerconst_interintra->atom_types_map_const[atom_id];
@@ -254,9 +255,9 @@ void gpu_calc_energy(
 		float y = calc_coords[atom_id].y;
 		float z = calc_coords[atom_id].z;
 		float q = cData.pKerconst_interintra->atom_charges_const[atom_id];
-		if ((x < 0) || (y < 0) || (z < 0) || (x >= cData.dockpars.gridsize_x-1)
-				                  || (y >= cData.dockpars.gridsize_y-1)
-						  || (z >= cData.dockpars.gridsize_z-1)){
+		if ((x < 0) || (y < 0) || (z < 0) || (x >= dockpars.gridsize_x-1)
+				                  || (y >= dockpars.gridsize_y-1)
+						  || (z >= dockpars.gridsize_z-1)){
 			energy += 16777216.0f; //100000.0f;
 			continue; // get on with loop as our work here is done (we crashed into the walls)
 		}
@@ -294,7 +295,7 @@ void gpu_calc_energy(
 		#endif
 
 		// Capturing electrostatic values
-		atom_typeid = cData.dockpars.num_of_map_atypes;
+		atom_typeid = dockpars.num_of_map_atypes;
 
 		mul_tmp = atom_typeid*g3<<2;
 		// Calculating electrostatic energy
@@ -305,7 +306,7 @@ void gpu_calc_energy(
 		#endif
 
 		// Capturing desolvation values
-		atom_typeid = cData.dockpars.num_of_map_atypes+1;
+		atom_typeid = dockpars.num_of_map_atypes+1;
 
 		mul_tmp = atom_typeid*g3<<2;
 		// Calculating desolvation energy
@@ -321,14 +322,14 @@ void gpu_calc_energy(
 	// are independent from each other, -> NO BARRIER NEEDED
 	// but require different operations,
 	// thus, they can be executed only sequentially on the GPU.
-	float delta_distance = 0.5f * cData.dockpars.smooth; 
+	float delta_distance = 0.5f * dockpars.smooth; 
 
 	// ================================================
 	// CALCULATING INTRAMOLECULAR ENERGY
 	// ================================================
 //	#pragma omp parallel for
 	for (uint contributor_counter = idx;
-	          contributor_counter < cData.dockpars.num_of_intraE_contributors;
+	          contributor_counter < dockpars.num_of_intraE_contributors;
 	          contributor_counter += blockDim)
 
 	{
@@ -345,7 +346,7 @@ void gpu_calc_energy(
 		float subz = calc_coords[atom1_id].z - calc_coords[atom2_id].z;
 
 		// Calculating atomic_distance
-		float atomic_distance = sqrt(subx*subx + suby*suby + subz*subz)*cData.dockpars.grid_spacing;
+		float atomic_distance = sqrt(subx*subx + suby*suby + subz*subz)*dockpars.grid_spacing;
 
 		// Getting type IDs
 		uint atom1_typeid = cData.pKerconst_interintra->atom_types_const[atom1_id];
@@ -378,7 +379,7 @@ void gpu_calc_energy(
 			}
 
 			// Calculating van der Waals / hydrogen bond term
-			uint idx = atom1_typeid * cData.dockpars.num_of_atypes + atom2_typeid;
+			uint idx = atom1_typeid * dockpars.num_of_atypes + atom2_typeid;
             float s2 = smoothed_distance * smoothed_distance;
             float s4 = s2 * s2;
             float s6 = s2 * s4;
@@ -402,27 +403,27 @@ void gpu_calc_energy(
 			float dist2 = atomic_distance*atomic_distance;
 			// Calculating desolvation term
 			float desolv_energy =  ((cData.pKerconst_intra->dspars_S_const[atom1_typeid] +
-						 cData.dockpars.qasp*fabs(q1)) * cData.pKerconst_intra->dspars_V_const[atom2_typeid] +
+						 dockpars.qasp*fabs(q1)) * cData.pKerconst_intra->dspars_V_const[atom2_typeid] +
 						(cData.pKerconst_intra->dspars_S_const[atom2_typeid] +
-						 cData.dockpars.qasp*fabs(q2)) * cData.pKerconst_intra->dspars_V_const[atom1_typeid]) *
-						(cData.dockpars.coeff_desolv*(12.96f-0.1063f*dist2*(1.0f-0.001947f*dist2)) / 
+						 dockpars.qasp*fabs(q2)) * cData.pKerconst_intra->dspars_V_const[atom1_typeid]) *
+						(dockpars.coeff_desolv*(12.96f-0.1063f*dist2*(1.0f-0.001947f*dist2)) / 
                         (12.96f+dist2*(0.4137f+dist2*(0.00357f+0.000112f*dist2))) // *native_exp(-0.03858025f*atomic_distance*atomic_distance);
 							      );
 			// Calculating electrostatic term
 			float dist_shift=atomic_distance+1.261f;
 			dist2=dist_shift*dist_shift;
 			float diel = (1.105f / dist2)+0.0104f;
-			float es_energy = cData.dockpars.coeff_elec * q1 * q2 / atomic_distance;
+			float es_energy = dockpars.coeff_elec * q1 * q2 / atomic_distance;
 			energy += diel * es_energy + desolv_energy;
 
 			#if defined (DEBUG_ENERGY_KERNEL)
-			intraE += (cData.dockpars.coeff_elec * q1 * q2) /
+			intraE += (dockpars.coeff_elec * q1 * q2) /
                       (atomic_distance * (DIEL_A + (DIEL_B / (1.0f + DIEL_K*native_exp(-DIEL_B_TIMES_H*atomic_distance))))) +
 						((cData.pKerconst_intra->dspars_S_const[atom1_typeid] +
-						  cData.dockpars.qasp*fabs(q1)) * cData.pKerconst_intra->dspars_V_const[atom2_typeid] +
+						  dockpars.qasp*fabs(q1)) * cData.pKerconst_intra->dspars_V_const[atom2_typeid] +
 						 (cData.pKerconst_intra->dspars_S_const[atom2_typeid] +
-						  cData.dockpars.qasp*fabs(q2))*cData.pKerconst_intra->dspars_V_const[atom1_typeid]) *
-							cData.dockpars.coeff_desolv*exp(-0.03858025f*pow(atomic_distance, 2));
+						  dockpars.qasp*fabs(q2))*cData.pKerconst_intra->dspars_V_const[atom1_typeid]) *
+							dockpars.coeff_desolv*exp(-0.03858025f*pow(atomic_distance, 2));
 			#endif
 		} // if cuttoff2 - internuclear-distance at 20.48A
 
@@ -441,6 +442,7 @@ void gpu_calc_energy(
 		// ------------------------------------------------
 
 	} // End contributor_counter for-loop (INTRAMOLECULAR ENERGY)
+
 
 	// reduction to calculate energy
 }

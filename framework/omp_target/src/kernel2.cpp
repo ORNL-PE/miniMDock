@@ -23,7 +23,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "kernels.hpp"
 
-void gpu_sum_evals(uint32_t blocks, uint32_t threadsPerBlock, GpuData& cData)
+void gpu_sum_evals(uint32_t blocks, 
+                   uint32_t threadsPerBlock, 
+                   GpuData& cData,
+                   GpuDockparameters dockpars)
 {
     int sum_evals = 0;
     int teamIdx = 0;
@@ -32,13 +35,13 @@ void gpu_sum_evals(uint32_t blocks, uint32_t threadsPerBlock, GpuData& cData)
     //reduction(+:sum_evals)
     {
     #pragma omp distribute
-    for (int Idx = 0; Idx < cData.dockpars.pop_size; Idx += threadsPerBlock ) {
+    for (int Idx = 0; Idx < dockpars.pop_size; Idx += threadsPerBlock ) {
     
         teamIdx = omp_get_team_num();
         //int sum_evals = 0;
-    	int* pEvals_of_new_entities = cData.pMem_evals_of_new_entities + teamIdx * cData.dockpars.pop_size;
+    	int* pEvals_of_new_entities = cData.pMem_evals_of_new_entities + teamIdx * dockpars.pop_size;
         #pragma omp parallel for reduction(+:sum_evals)	
-        for (int entity_counter = Idx; entity_counter < cData.dockpars.pop_size; entity_counter++) 
+        for (int entity_counter = Idx; entity_counter < dockpars.pop_size; entity_counter++) 
         {
 	    sum_evals += pEvals_of_new_entities[entity_counter];
 	}

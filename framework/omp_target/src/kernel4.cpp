@@ -35,7 +35,8 @@ void gpu_gen_and_eval_newpops(
     float* pMem_energies_current,
     float* pMem_conformations_next,
     float* pMem_energies_next,
-    GpuData& cData
+    GpuData& cData,
+    GpuDockparameters dockpars
 )
 {
     const int blockDim = threadsPerBlock;
@@ -65,9 +66,9 @@ void gpu_gen_and_eval_newpops(
             int bestID; 
 
 	    // In this case this compute-unit is responsible for elitist selection
-	    if ((teamIdx % cData.dockpars.pop_size) == 0) {
+	    if ((teamIdx % dockpars.pop_size) == 0) {
             // Find and copy best member of population to position 0
-            if (threadIdx < cData.dockpars.pop_size)
+            if (threadIdx <dockpars.pop_size)
             {
                bestID = teamIdx + threadIdx;
                energy = pMem_energies_current[teamIdx + threadIdx];
@@ -79,7 +80,7 @@ void gpu_gen_and_eval_newpops(
             }
         
             // Scan through population (we already picked up a blockDim's worth above so skip)
-            for (int i = teamIdx + blockDim + threadIdx; i < teamIdx + cData.dockpars.pop_size; i += blockDim)
+            for (int i = teamIdx + blockDim + threadIdx; i < teamIdx + dockpars.pop_size; i += blockDim)
             {
                float e = pMem_energies_current[i];
                if (e < energy)
@@ -130,7 +131,7 @@ void gpu_gen_and_eval_newpops(
             // Copy best genome to next generation
             int dOffset = teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
             int sOffset = sBestID[0] * GENOTYPE_LENGTH_IN_GLOBMEM;
-            for (int i = threadIdx ; i < cData.dockpars.num_of_genes; i += blockDim)
+            for (int i = threadIdx ; i < dockpars.num_of_genes; i += blockDim)
             {
                 pMem_conformations_next[dOffset + i] = pMem_conformations_current[sOffset + i];
             }
@@ -156,14 +157,14 @@ void gpu_gen_and_eval_newpops(
         }
 #endif
 		// Determining run ID
-        run_id = teamIdx / cData.dockpars.pop_size;
+        run_id = teamIdx / dockpars.pop_size;
 //--- thread barrier
 
 
 		if (threadIdx < 4)	//it is not ensured that the four candidates will be different...
 		{
-			parent_candidates[threadIdx]  = (int) (cData.dockpars.pop_size*randnums[threadIdx]); //using randnums[0..3]
-			candidate_energies[threadIdx] = pMem_energies_current[run_id*cData.dockpars.pop_size+parent_candidates[threadIdx]];
+			parent_candidates[threadIdx]  = (int) (dockpars.pop_size*randnums[threadIdx]); //using randnums[0..3]
+			candidate_energies[threadIdx] = pMem_energies_current[run_id*dockpars.pop_size+parent_candidates[threadIdx]];
 		}
 //--- thread barrier
 
@@ -173,7 +174,7 @@ void gpu_gen_and_eval_newpops(
 			// to reduce number of operations in device
 			if (candidate_energies[2*threadIdx] < candidate_energies[2*threadIdx+1])
                         {
-				if (/*100.0f**/randnums[4+threadIdx] < cData.dockpars.tournament_rate) {		//using randnum[4..5]
+				if (/*100.0f**/randnums[4+threadIdx] < dockpars.tournament_rate) {		//using randnum[4..5]
 					parents[threadIdx] = parent_candidates[2*threadIdx];
 				}
 				else {
@@ -182,7 +183,7 @@ void gpu_gen_and_eval_newpops(
                         }
 			else
                         {
-				if (/*100.0f**/randnums[4+threadIdx] < cData.dockpars.tournament_rate) {
+				if (/*100.0f**/randnums[4+threadIdx] < dockpars.tournament_rate) {
 					parents[threadIdx] = parent_candidates[2*threadIdx+1];
 				}
 				else {
@@ -195,11 +196,11 @@ void gpu_gen_and_eval_newpops(
 		// Performing crossover
 		// Notice: dockpars_crossover_rate was scaled down to [0,1] in host
 		// to reduce number of operations in device
-		if (/*100.0f**/randnums[6] < cData.dockpars.crossover_rate)	// Using randnums[6]
+		if (/*100.0f**/randnums[6] < dockpars.crossover_rate)	// Using randnums[6]
 		{
 			if (threadIdx < 2) {
 				// Using randnum[7..8]
-				covr_point[threadIdx] = (int) ((cData.dockpars.num_of_genes-1)*randnums[7+threadIdx]);
+				covr_point[threadIdx] = (int) ((dockpars.num_of_genes-1)*randnums[7+threadIdx]);
 			}
 //--- thread barrier
 			
@@ -215,34 +216,34 @@ void gpu_gen_and_eval_newpops(
 //--- thread barrier
 
 			for (uint32_t gene_counter = threadIdx;
-			     gene_counter < cData.dockpars.num_of_genes;
+			     gene_counter < dockpars.num_of_genes;
 			     gene_counter+= blockDim)
 			{
 				// Two-point crossover
 				if (covr_point[0] != covr_point[1]) 
 				{
 					if ((gene_counter <= covr_point[0]) || (gene_counter > covr_point[1]))
-						offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*cData.dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM+gene_counter];
+						offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM+gene_counter];
 					else
-						offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*cData.dockpars.pop_size+parents[1])*GENOTYPE_LENGTH_IN_GLOBMEM+gene_counter];
+						offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*dockpars.pop_size+parents[1])*GENOTYPE_LENGTH_IN_GLOBMEM+gene_counter];
 				}
 				// Single-point crossover
 				else
 				{									             
 					if (gene_counter <= covr_point[0])
-						offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*cData.dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM+gene_counter];
+						offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM+gene_counter];
 					else
-						offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*cData.dockpars.pop_size+parents[1])*GENOTYPE_LENGTH_IN_GLOBMEM+gene_counter];
+						offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*dockpars.pop_size+parents[1])*GENOTYPE_LENGTH_IN_GLOBMEM+gene_counter];
 				}
 			}
 		}
 		else	//no crossover
 		{
             		for (uint32_t gene_counter = threadIdx;
-			     gene_counter < cData.dockpars.num_of_genes;
+			     gene_counter < dockpars.num_of_genes;
 			     gene_counter+= blockDim)
             		{
-                		offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*cData.dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter];
+                		offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter];
             		}
 		} // End of crossover
 
@@ -250,20 +251,20 @@ void gpu_gen_and_eval_newpops(
 
 		// Performing mutation
 		for (uint32_t gene_counter = threadIdx;
-		     gene_counter < cData.dockpars.num_of_genes;
+		     gene_counter < dockpars.num_of_genes;
 		     gene_counter+= blockDim)
 		{
 			// Notice: dockpars_mutation_rate was scaled down to [0,1] in host
 			// to reduce number of operations in device
-			if (/*100.0f**/gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx) < cData.dockpars.mutation_rate)
+			if (/*100.0f**/gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx) < dockpars.mutation_rate)
 			{
 				// Translation genes
 				if (gene_counter < 3) {
-					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dmov*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1);
+					offspring_genotype[gene_counter] += dockpars.abs_max_dmov*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1);
 				}
 				// Orientation and torsion genes
 				else {
-					offspring_genotype[gene_counter] += cData.dockpars.abs_max_dang*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1);
+					offspring_genotype[gene_counter] += dockpars.abs_max_dang*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1);
 					map_angle(offspring_genotype[gene_counter]);
 				}
 
@@ -280,7 +281,8 @@ void gpu_gen_and_eval_newpops(
                 	&sFloatAccumulator,
 	        	threadIdx,
                 	threadsPerBlock,
-			cData
+			cData,
+                        dockpars
 		);
         
         
@@ -296,7 +298,7 @@ void gpu_gen_and_eval_newpops(
 
 		// Copying new offspring to next generation
         for (uint32_t gene_counter = threadIdx;
-		     gene_counter < cData.dockpars.num_of_genes;
+		     gene_counter < dockpars.num_of_genes;
 		     gene_counter+= blockDim)
         {
             pMem_conformations_next[teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter] = offspring_genotype[gene_counter];
