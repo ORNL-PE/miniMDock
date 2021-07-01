@@ -480,8 +480,27 @@ filled with clock() */
     cData.pKerconst_rotlist = &KerConst_rotlist;
     cData.pKerconst_conform = &KerConst_conform;
 
-   // #pragma omp target enter data map(to: cData.pKerconst_interintra, cData.pKerconst_intracontrib, cData.pKerconst_intra, cData.pKerconst_rotlist, cData.pKerconst_conform)
- 
+    #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_charges_const)
+    #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_types_const)
+    #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_types_map_const)
+
+    #pragma omp target enter data map(to: cData.pKerconst_intracontrib->intraE_contributors_const)
+
+    #pragma omp target enter data map(to: cData.pKerconst_intra->reqm_const)
+    #pragma omp target enter data map(to: cData.pKerconst_intra->atom1_types_reqm_const)
+    #pragma omp target enter data map(to: cData.pKerconst_intra->atom2_types_reqm_const)
+    #pragma omp target enter data map(to: cData.pKerconst_intra->VWpars_AC_const)
+    #pragma omp target enter data map(to: cData.pKerconst_intra->VWpars_BD_const)
+    #pragma omp target enter data map(to: cData.pKerconst_intra->dspars_S_const)
+    #pragma omp target enter data map(to: cData.pKerconst_intra->dspars_V_const)
+
+    #pragma omp target enter data map(to: cData.pKerconst_rotlist->rotlist_const)
+
+    #pragma omp target enter data map(to: cData.pKerconst_conform->ref_coords_const)
+    #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_moving_vectors_const)
+    #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_unit_vectors_const)
+    #pragma omp target enter data map(to: cData.pKerconst_conform->ref_orientation_quats_const)
+
     cData.pMem_rotbonds_const = KerConst_grads.rotbonds;
     cData.pMem_rotbonds_atoms_const = KerConst_grads.rotbonds_atoms;
     cData.pMem_num_rotating_atoms_per_rotbond_const = KerConst_grads.num_rotating_atoms_per_rotbond;
@@ -830,7 +849,7 @@ filled with clock() */
 #if defined (MAPPED_COPY)
 		//map_cpu_evals_of_runs = (int*) memMap(command_queue, mem_gpu_evals_of_runs, CL_MAP_READ, size_evals_of_runs);
 #else
-           #pragma omp target exit data map(from: pMem_gpu_evals_of_runs[:])
+           #pragma omp target exit data map(from: pMem_gpu_evals_of_runs[:size_evals_of_runs])
 #endif
 		// -------- Replacing with memory maps! ------------
 		generation_cnt++;
