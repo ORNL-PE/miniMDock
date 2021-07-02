@@ -59,9 +59,22 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
          float3 calc_coords[MAX_NUM_OF_ATOMS];
          float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
          float offspring_energy;
-         float sFloatAccumulator;
          int entity_id;
-         size_t scratchpad = MAX_NUM_OF_ATOMS + 4*ACTUAL_GENOTYPE_LENGTH;
+
+	 #pragma omp allocate(genotype_candidate) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(genotype_deviate) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(genotype_bias) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(rho) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(cons_succ) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(cons_fail) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(iteration_cnt) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(evaluation_cnt) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(calc_coords) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(offspring_energy) allocator(omp_pteam_mem_alloc)
+	 #pragma omp allocate(entity_id) allocator(omp_pteam_mem_alloc)
+        
+	 size_t scratchpad = MAX_NUM_OF_ATOMS + 4*ACTUAL_GENOTYPE_LENGTH;
          #pragma omp parallel for\
               //private(scratchpad)\
               //allocator(omp_pteam_memalloc)
@@ -166,7 +179,6 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
                 candidate_energy,
                 run_id,
                 calc_coords,
-                &sFloatAccumulator,
 		threadIdx,
 	        nthreads,
 		cData,
@@ -223,7 +235,6 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
                 	candidate_energy,
                 	run_id,
                 	calc_coords,
-                	&sFloatAccumulator,
 	        	threadIdx,
                 	nthreads,
   			cData,

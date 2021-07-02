@@ -33,14 +33,15 @@ void gpu_calc_initpop(	uint32_t nblocks,
 			GpuDockparameters dockpars )
 {
 
+
     #pragma omp target 
     #pragma omp teams distribute num_teams(nblocks) thread_limit(threadsPerBlock)
     for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)
     {  
         float3 calc_coords[MAX_NUM_OF_ATOMS];
-        float  sFloatAccumulator;
-   
-        size_t scratchpad = MAX_NUM_OF_ATOMS + GENOTYPE_LENGTH_IN_GLOBMEM; 
+	
+	#pragma omp allocate(calc_coords) allocator(omp_pteam_mem_alloc)   
+        //size_t scratchpad = MAX_NUM_OF_ATOMS + GENOTYPE_LENGTH_IN_GLOBMEM; 
         #pragma omp parallel for\
 //            private(scratchpad)\
 //	    allocator(omp_pteam_memalloc)
@@ -49,15 +50,21 @@ void gpu_calc_initpop(	uint32_t nblocks,
             float  energy = 0.0f;
             int teamIdx = omp_get_team_num();
             int threadIdx = idx;
-            //int threadIdx = omp_get_thread_num();
+           // int threadIdx = omp_get_thread_num();
             int run_id = teamIdx / dockpars.pop_size;
+            //test[0] = teamIdx;
             float* pGenotype = pMem_conformations_current + teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
-	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, &sFloatAccumulator, threadIdx, threadsPerBlock, cData, dockpars );
+ //           printf("team %d \t blockId %d \t thread %d \t threadId %d \t run %d \t blocks %d \t threads %d \n", teamIdx, blockIdx, threadIdx, idx, run_id, nblocks, threadsPerBlock);
+//            printf("test[ %d ] \t  %f  \n", teamIdx, test[0]);
+//            printf("pGenotype[ %d ] \t  %f  \n", teamIdx, pGenotype[0]);
+	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, threadIdx, threadsPerBlock, cData, dockpars );
 	
             // Write out final energy
             if (threadIdx == 0){
                 pMem_energies_current[teamIdx] = energy;
+            printf("energies[ %d ] \t  %f \t %f  \n", teamIdx, energy, pMem_energies_current[teamIdx]);
                 cData.pMem_evals_of_new_entities[teamIdx] = 1;
+            printf("entities[ %d ] \t  %f  \n", teamIdx, cData.pMem_evals_of_new_entities[teamIdx]);
 	    }
 
         }// End for a team 

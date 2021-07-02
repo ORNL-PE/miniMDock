@@ -8,7 +8,6 @@ void gpu_calc_energy(
     float& energy,
     int& run_id,
     float3* calc_coords,
-    float* pFloatAccumulator,
     int idx,
     uint32_t blockDim,
     GpuData& cData,

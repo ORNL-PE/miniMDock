@@ -53,12 +53,23 @@ void gpu_gen_and_eval_newpops(
          float sBestEnergy[32];
          int sBestID[32];
 	 float3 calc_coords[MAX_NUM_OF_ATOMS];
-         float sFloatAccumulator;
+
+	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)	 
+	 #pragma omp allocate(parent_candidates) allocator(omp_pteam_mem_alloc)	 
+	 #pragma omp allocate(candidate_energies) allocator(omp_pteam_mem_alloc)	 
+	 #pragma omp allocate(parents) allocator(omp_pteam_mem_alloc)	 
+	 #pragma omp allocate(covr_point) allocator(omp_pteam_mem_alloc)	 
+	 #pragma omp allocate(randnums) allocator(omp_pteam_mem_alloc)	 
+	 #pragma omp allocate(sBestEnergy) allocator(omp_pteam_mem_alloc)	 
+	 #pragma omp allocate(sBestID) allocator(omp_pteam_mem_alloc)	 
+	 #pragma omp allocate(calc_coords) allocator(omp_pteam_mem_alloc)	 
+
 	 #pragma omp parallel for
          for( int idx = 0; idx < threadsPerBlock; idx++)
 	 { 
             int teamIdx = omp_get_team_num();
-            int threadIdx = omp_get_thread_num();
+            int threadIdx = idx;
+            //int threadIdx = omp_get_thread_num();
  
 	    int run_id;    
 	    int temp_covr_point;
@@ -90,42 +101,14 @@ void gpu_gen_and_eval_newpops(
                }
            }
         
-           // Reduce to shared memory by warp
-        /*
- 	int tgx = idx & cData.warpmask;
-        WARPMINIMUM2(tgx, energy, bestID);
-        int warpID = idx >> cData.warpbits;
-        if (tgx == 0)
-        {
-            sBestID[warpID] = bestID;
-            sBestEnergy[warpID] = fminf(MAXENERGY, energy);
-        }
-//--- thread barrier
-               
-        // Perform final reduction in warp 0
-        if (warpID == 0)
-        {
-            int blocks = blockDim / 32;
-            if (tgx < blocks)
-            {
-                bestID = sBestID[tgx];
-                energy = sBestEnergy[tgx];
-            }
-            else
-            {
-                bestID = -1;
-                energy = FLT_MAX;
-            }
-            WARPMINIMUM2(tgx, energy, bestID);     
-            
-            if (tgx == 0)
+           // Reduce to shared memory ( by warp?)
+            if (threadIdx == 0)
             {
                 pMem_energies_next[blockIdx] = energy;
                 cData.pMem_evals_of_new_entities[blockIdx] = 0;
                 sBestID[0] = bestID;
             }
-        }
-        */
+        
 //--- thread barrier
         
             // Copy best genome to next generation
@@ -278,7 +261,6 @@ void gpu_gen_and_eval_newpops(
 			energy,
 			run_id,
 			calc_coords,
-                	&sFloatAccumulator,
 	        	threadIdx,
                 	threadsPerBlock,
 			cData,
