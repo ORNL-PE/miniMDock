@@ -781,8 +781,8 @@ filled with clock() */
 	{
 		if (mypars->autostop) {
                         if (generation_cnt % mypars->as_frequency == 0) {
-				#pragma omp target exit data map(from: pMem_energies_current[:size_energies])
-				//#pragma omp target exit data map(from: sim_state.cpu_energies.data())
+				#pragma omp target update data from(pMem_energies_current[:size_energies])
+				sim_state.cpu_energies.assign(pMem_energies_current, pMem_energies_current+size_energies);
                                 if (autostop.check_if_satisfactory(generation_cnt, sim_state.cpu_energies.data(), total_evals))
                                         break; // Exit loop
                         }
@@ -849,7 +849,8 @@ filled with clock() */
 #if defined (MAPPED_COPY)
 		//map_cpu_evals_of_runs = (int*) memMap(command_queue, mem_gpu_evals_of_runs, CL_MAP_READ, size_evals_of_runs);
 #else
-           #pragma omp target exit data map(from: pMem_gpu_evals_of_runs[:size_evals_of_runs])
+           #pragma omp target update from(pMem_gpu_evals_of_runs[:size_evals_of_runs])
+	   sim_state.cpu_evals_of_runs.assign(pMem_gpu_evals_of_runs, pMem_gpu_evals_of_runs+size_evals_of_runs);
 #endif
 		// -------- Replacing with memory maps! ------------
 		generation_cnt++;
@@ -904,8 +905,10 @@ filled with clock() */
 	// http://www.cc.gatech.edu/~vetter/keeneland/tutorial-2012-02-20/08-opencl.pdf
 	// ===============================================================================
 	//processing results
-    #pragma omp target exit data map(from: pMem_conformations_current[:size_populations], pMem_energies_current[:size_energies]) 
-    //#pragma omp target exit data map(from: cpu_final_populations, sim_state.cpu_energies.data()) 
+    #pragma omp target exit data map(from: pMem_conformations_current[:size_populations]) 
+    #pragma omp target exit data map(from: pMem_energies_current[:size_energies]) 
+    cpu_final_populations = pMem_conformations_current;
+    sim_state.cpu_energies.assign(pMem_energies_current, pMem_energies_current+size_energies);
 
     //JL TODO - Should the tData arrays be zeroed before the next run?
 

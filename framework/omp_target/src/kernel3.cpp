@@ -43,9 +43,10 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 
     const int blockDim = nthreads;
     #pragma omp target
-    #pragma omp teams num_teams(nblocks) thread_limit(nthreads) 
-    #pragma omp distribute
-    for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)	
+    #pragma omp teams parallel num_teams(nblocks) thread_limit(nthreads)
+    //#pragma omp teams num_teams(nblocks) thread_limit(nthreads) 
+    //#pragma omp distribute
+    //for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)	
     {  //for teams
 
          float genotype_candidate[ACTUAL_GENOTYPE_LENGTH];
@@ -74,15 +75,15 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 	 #pragma omp allocate(offspring_energy) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(entity_id) allocator(omp_pteam_mem_alloc)
         
-	 size_t scratchpad = MAX_NUM_OF_ATOMS + 4*ACTUAL_GENOTYPE_LENGTH;
-         #pragma omp parallel for\
+	 //size_t scratchpad = MAX_NUM_OF_ATOMS + 4*ACTUAL_GENOTYPE_LENGTH;
+         //#pragma omp parallel for\
               //private(scratchpad)\
               //allocator(omp_pteam_memalloc)
-         for (int threadIdx = 0; threadIdx < nthreads; threadIdx++)
+         //for (int threadIdx = 0; threadIdx < nthreads; threadIdx++)
          {  //for threads in a team
 
               int teamIdx = omp_get_team_num();
-              //int threadIdx = omp_get_thread_num();
+              int threadIdx = omp_get_thread_num();
 	      float candidate_energy;
               int run_id;
 

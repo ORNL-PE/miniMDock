@@ -41,8 +41,9 @@ void gpu_gen_and_eval_newpops(
 {
     const int blockDim = threadsPerBlock;
     #pragma omp target
-    #pragma omp teams distribute num_teams(nblocks) thread_limit(threadsPerBlock)
-    for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)
+    #pragma omp teams parallel num_teams(nblocks) thread_limit(threadsPerBlock)
+    //#pragma omp teams distribute num_teams(nblocks) thread_limit(threadsPerBlock)
+    //for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)
     {
 	 float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
 	 int parent_candidates[4];
@@ -64,12 +65,12 @@ void gpu_gen_and_eval_newpops(
 	 #pragma omp allocate(sBestID) allocator(omp_pteam_mem_alloc)	 
 	 #pragma omp allocate(calc_coords) allocator(omp_pteam_mem_alloc)	 
 
-	 #pragma omp parallel for
-         for( int idx = 0; idx < threadsPerBlock; idx++)
+	// #pragma omp parallel for
+        // for( int idx = 0; idx < threadsPerBlock; idx++)
 	 { 
             int teamIdx = omp_get_team_num();
-            int threadIdx = idx;
-            //int threadIdx = omp_get_thread_num();
+           // int threadIdx = idx;
+            int threadIdx = omp_get_thread_num();
  
 	    int run_id;    
 	    int temp_covr_point;
