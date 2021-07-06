@@ -51,7 +51,7 @@ void gpu_gen_and_eval_newpops(
 	 float randnums[10];
          float sBestEnergy[32];
          int sBestID[32];
-	 float3 calc_coords[MAX_NUM_OF_ATOMS];
+	 float3struct calc_coords[MAX_NUM_OF_ATOMS];
 /*
 	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)	 
 	 #pragma omp allocate(parent_candidates) allocator(omp_pteam_mem_alloc)	 

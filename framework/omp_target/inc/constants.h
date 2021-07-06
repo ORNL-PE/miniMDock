@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
-
+/*
 typedef struct
 {
         int             num_of_atoms;
@@ -94,7 +94,40 @@ typedef struct
        float ref_orientation_quats_const  [4*MAX_NUM_OF_RUNS];
 } kernelconstant_conform;
 
+*/
 
+
+struct float4struct
+//Quarternion struct for floats (float4)
+{
+        float x;
+        float y;
+        float z;
+        float w;
+
+        inline float4struct() {}
+        inline float4struct(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
+        inline float4struct operator + (const float4struct &p)  const { return float4struct(x+p.x, y+p.y, z+p.z, w+p.w); }
+        inline float4struct operator - (const float4struct &p)  const { return float4struct(x-p.x, y-p.y, z-p.z, w-p.w); }
+
+};
+
+
+struct float3struct
+//Coordinate struct for floats (float4)
+{
+        float x;
+        float y;
+        float z;
+
+        inline float3struct() {}
+        inline float3struct(float x, float y, float z) : x(x), y(y), z(z) {}
+        inline float3struct operator + (const float3struct &p)  const { return float3struct(x+p.x, y+p.y, z+p.z); }
+        inline float3struct operator - (const float3struct &p)  const { return float3struct(x-p.x, y-p.y, z-p.z); }
+
+};
+
+/*
 struct GpuData {
     GpuDockparameters               dockpars;
     
@@ -119,5 +152,5 @@ struct GpuData {
     // CUDA-specific constants
     unsigned int                    warpmask;
 };
-
+*/
 

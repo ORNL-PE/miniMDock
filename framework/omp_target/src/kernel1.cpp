@@ -37,7 +37,7 @@ void gpu_calc_initpop(	uint32_t pops_by_runs,
     #pragma omp teams distribute 
     for (int idx = 0; idx < pops_by_runs; idx++)
     {  
-        float3 calc_coords[MAX_NUM_OF_ATOMS];
+        float3struct calc_coords[MAX_NUM_OF_ATOMS];
 	
 	#pragma omp allocate(calc_coords) allocator(omp_pteam_mem_alloc)   
         float  energy = 0.0f;

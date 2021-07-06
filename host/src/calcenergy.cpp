@@ -380,6 +380,7 @@ int prepare_const_fields_for_gpu(Liganddata* 	   		myligand_reference,
 		KerConst_conform->ref_coords_const[3*m]		 = ref_coords_x[m];
 		KerConst_conform->ref_coords_const[3*m+1]	 = ref_coords_y[m];
 		KerConst_conform->ref_coords_const[3*m+2]	 = ref_coords_z[m];
+                //printf("atom %d: (%d\t %d \t %d) \n", m, KerConst_conform->ref_coords_const[3*m],  KerConst_conform->ref_coords_const[3*m+1],  KerConst_conform->ref_coords_const[3*m+2]);
 	}
 	for (m=0;m<3*MAX_NUM_OF_ROTBONDS;m++){ KerConst_conform->rotbonds_moving_vectors_const[m]= rotbonds_moving_vectors[m]; }
 	for (m=0;m<3*MAX_NUM_OF_ROTBONDS;m++){ KerConst_conform->rotbonds_unit_vectors_const[m]  = rotbonds_unit_vectors[m]; }

@@ -59,7 +59,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
          int   cons_fail;
          int   iteration_cnt;
          int   evaluation_cnt;
-         float3 calc_coords[MAX_NUM_OF_ATOMS];
+         float3struct calc_coords[MAX_NUM_OF_ATOMS];
          float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
          float offspring_energy;
          int entity_id;

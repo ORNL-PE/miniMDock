@@ -220,7 +220,7 @@ void setup_gpu_for_docking(GpuData& cData, GpuTempData& tData)
     cData.pMem_rotbonds_const = (int*) calloc( sz_rotbonds_const, sizeof(*cData.pMem_rotbonds_const));
     cData.pMem_rotbonds_atoms_const = (int*)calloc( sz_rotbonds_atoms_const, sizeof(*cData.pMem_rotbonds_atoms_const));
     cData.pMem_num_rotating_atoms_per_rotbond_const = (int*) calloc( MAX_NUM_OF_ROTBONDS, sizeof(*cData.pMem_num_rotating_atoms_per_rotbond_const));
-printf("test1 ...\n");
+
     #pragma omp target enter data map(to: cData)
 
     #pragma omp target enter data map(to: cData.pKerconst_interintra) 
@@ -235,10 +235,8 @@ printf("test1 ...\n");
     #pragma omp target enter data map(to: cData.pKerconst_conform)
     #pragma omp target enter data map(to: cData.pKerconst_conform[:sz_conform_const] )
 
-printf("test2 ...\n");
     #pragma omp target enter data map(to: cData.pKerconst_intracontrib)
     #pragma omp target enter data map(to: cData.pKerconst_intracontrib[:sz_intracontrib_const])
-printf("test3...\n");
     
     #pragma omp target enter data map(to: cData.pMem_angle_const)
     #pragma omp target enter data map(to: cData.pMem_angle_const[:sz_angle_const])
@@ -268,7 +266,6 @@ printf("test3...\n");
 	RTERROR(status, "pMem_fgrids: failed to allocate GPU memory.\n");
     }*/
  
-printf("test4...\n");
     size_t size_populations = MAX_NUM_OF_RUNS * MAX_POPSIZE * GENOTYPE_LENGTH_IN_GLOBMEM;
     tData.pMem_conformations1 = (float*) calloc( size_populations, sizeof(*tData.pMem_conformations1));
     tData.pMem_conformations2 = (float*) calloc( size_populations, sizeof(*tData.pMem_conformations2));
@@ -294,7 +291,6 @@ printf("test4...\n");
     #pragma omp target enter data map(to: tData.pMem_evals_of_new_entities)
     #pragma omp target enter data map(to: tData.pMem_evals_of_new_entities[:sz_new_entities])
 
-printf("test5...\n");
     size_t size_evals_of_runs = MAX_NUM_OF_RUNS;
     //--- Have to be changed to unified memory
    //#pragma omp requires unified_shared_memory
@@ -328,7 +324,8 @@ void finish_gpu_from_docking(GpuData& cData, GpuTempData& tData)
     free(cData.pMem_angle_const);
     free(cData.pMem_dependence_on_theta_const);
     free(cData.pMem_dependence_on_rotangle_const);
-    
+    //free(cData);   
+
     // Non-constant
     free(tData.pMem_fgrids);
     free(tData.pMem_conformations1);
@@ -338,6 +335,7 @@ void finish_gpu_from_docking(GpuData& cData, GpuTempData& tData)
     free(tData.pMem_evals_of_new_entities);
     free(tData.pMem_gpu_evals_of_runs);
     free(tData.pMem_prng_states);
+    //free(tData);
 }
 
 int docking_with_gpu(   const Gridinfo*  	mygrid,
@@ -479,13 +477,13 @@ filled with clock() */
     cData.pKerconst_intra = &KerConst_intra;
     cData.pKerconst_rotlist = &KerConst_rotlist;
     cData.pKerconst_conform = &KerConst_conform;
-
+ 
     #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_charges_const)
     #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_types_const)
     #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_types_map_const)
-
+    
     #pragma omp target enter data map(to: cData.pKerconst_intracontrib->intraE_contributors_const)
-
+    
     #pragma omp target enter data map(to: cData.pKerconst_intra->reqm_const)
     #pragma omp target enter data map(to: cData.pKerconst_intra->atom1_types_reqm_const)
     #pragma omp target enter data map(to: cData.pKerconst_intra->atom2_types_reqm_const)
@@ -493,14 +491,15 @@ filled with clock() */
     #pragma omp target enter data map(to: cData.pKerconst_intra->VWpars_BD_const)
     #pragma omp target enter data map(to: cData.pKerconst_intra->dspars_S_const)
     #pragma omp target enter data map(to: cData.pKerconst_intra->dspars_V_const)
-
+    
     #pragma omp target enter data map(to: cData.pKerconst_rotlist->rotlist_const)
 
     #pragma omp target enter data map(to: cData.pKerconst_conform->ref_coords_const)
-    #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_moving_vectors_const)
-    #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_unit_vectors_const)
-    #pragma omp target enter data map(to: cData.pKerconst_conform->ref_orientation_quats_const)
-
+  //  #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_moving_vectors_const)
+  //  #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_unit_vectors_const)
+  //  #pragma omp target enter data map(to: cData.pKerconst_conform->ref_orientation_quats_const)
+    
+    
     cData.pMem_rotbonds_const = KerConst_grads.rotbonds;
     cData.pMem_rotbonds_atoms_const = KerConst_grads.rotbonds_atoms;
     cData.pMem_num_rotating_atoms_per_rotbond_const = KerConst_grads.num_rotating_atoms_per_rotbond;
@@ -539,16 +538,13 @@ filled with clock() */
     #pragma omp target enter data map(to: cData.pMem_prng_states)
     #pragma omp target enter data map(to: cData.pMem_prng_states[:size_prng_seeds])
     
-   printf("entities[ 0 ] \t  %f  \n",cData.pMem_evals_of_new_entities[0]);
  
     // Upload data
     tData.pMem_fgrids = cpu_floatgrids;
     tData.pMem_gpu_evals_of_runs = sim_state.cpu_evals_of_runs.data();
     tData.pMem_prng_states = cpu_prng_seeds;
 
-//    printf("1 pMem_conformations_current[0] = %f \n", pMem_conformations_current[0]);
     pMem_conformations_current = cpu_init_populations;
-//    printf("2 pMem_conformations_current[0] = %f \n", pMem_conformations_current[0]);
     #pragma omp target enter data map(to: pMem_conformations_current)
     #pragma omp target enter data map(to: pMem_conformations_current[:size_populations])
 
@@ -615,8 +611,8 @@ filled with clock() */
 	}
 
        #pragma omp target enter data map(to: dockpars)       
-	
-        char method_chosen[64]; // 64 chars will be enough for this message as mypars->ls_method is 4 chars at the longest
+
+	char method_chosen[64]; // 64 chars will be enough for this message as mypars->ls_method is 4 chars at the longest
 	if(strcmp(mypars->ls_method, "sw") == 0){
 		strcpy(method_chosen,"Solis-Wets (sw)");
 	}
@@ -702,13 +698,10 @@ filled with clock() */
 	#ifdef DOCK_DEBUG
 		printf("\nExecution starts:\n\n");
 		printf("%-25s", "\tK_INIT");fflush(stdout);
-        cudaDeviceSynchronize();
+       // cudaDeviceSynchronize();
 	#endif
     gpu_calc_initpop(kernel1_gxsize, kernel1_lxsize, pMem_conformations_current, pMem_energies_current, cData, dockpars);
-    //gpu_calc_initpop(kernel1_gxsize, kernel1_lxsize, pMem_conformations_current, pMem_energies_current, cData.pMem_evals_of_new_entities, cData);
-	//runKernel1D(command_queue,kernel1,kernel1_gxsize,kernel1_lxsize,&time_start_kernel,&time_end_kernel);
 	#ifdef DOCK_DEBUG
-        cudaDeviceSynchronize();
 		printf("%15s" ," ... Finished\n");fflush(stdout);
 	#endif
 	// End of Kernel1
@@ -717,17 +710,13 @@ filled with clock() */
 	#ifdef DOCK_DEBUG
 		printf("%-25s", "\tK_EVAL");fflush(stdout);
 	#endif
-	//runKernel1D(command_queue,kernel2,kernel2_gxsize,kernel2_lxsize,&time_start_kernel,&time_end_kernel);
  
    gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData, dockpars);
 	#ifdef DOCK_DEBUG
-        cudaDeviceSynchronize();
 		printf("%15s" ," ... Finished\n");fflush(stdout);
 	#endif
 	// End of Kernel2
 	// ===============================================================================
-
-
 
 	#if 0
 	generation_cnt = 1;
@@ -784,7 +773,7 @@ filled with clock() */
 				#pragma omp target update from(pMem_energies_current[:size_energies])
 				sim_state.cpu_energies.assign(pMem_energies_current, pMem_energies_current+size_energies);
                                 if (autostop.check_if_satisfactory(generation_cnt, sim_state.cpu_energies.data(), total_evals))
-                                        break; // Exit loop
+                                       break; // Exit loop
                         }
 		}
 		else
@@ -810,8 +799,7 @@ filled with clock() */
 		#ifdef DOCK_DEBUG
 			printf("%-25s", "\tK_GA_GENERATION");fflush(stdout);
 		#endif
-        
-		//runKernel1D(command_queue,kernel4,kernel4_gxsize,kernel4_lxsize,&time_start_kernel,&time_end_kernel);
+       
         gpu_gen_and_eval_newpops(kernel4_gxsize, kernel4_lxsize, pMem_conformations_current, pMem_energies_current, pMem_conformations_next, pMem_energies_next, cData, dockpars);
 		#ifdef DOCK_DEBUG
 			printf("%15s", " ... Finished\n");fflush(stdout);
@@ -823,7 +811,6 @@ filled with clock() */
 				#ifdef DOCK_DEBUG
 					printf("%-25s", "\tK_LS_SOLISWETS");fflush(stdout);
 				#endif
-				//runKernel1D(command_queue,kernel3,kernel3_gxsize,kernel3_lxsize,&time_start_kernel,&time_end_kernel);
                 gpu_perform_LS(kernel3_gxsize, kernel3_lxsize, pMem_conformations_next, pMem_energies_next, cData, dockpars);                
 				#ifdef DOCK_DEBUG
 					printf("%15s" ," ... Finished\n");fflush(stdout);
@@ -837,7 +824,6 @@ filled with clock() */
 		#ifdef DOCK_DEBUG
 			printf("%-25s", "\tK_EVAL");fflush(stdout);
 		#endif
-		//runKernel1D(command_queue,kernel2,kernel2_gxsize,kernel2_lxsize,&time_start_kernel,&time_end_kernel);
         gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData, dockpars);       
         
 		#ifdef DOCK_DEBUG
@@ -882,6 +868,7 @@ filled with clock() */
 			printf("\tProgress %.3f %%\n", progress);
 			fflush(stdout);
 		#endif
+
 	} // End of while-loop
 
 /*
@@ -905,7 +892,7 @@ filled with clock() */
 	// http://www.cc.gatech.edu/~vetter/keeneland/tutorial-2012-02-20/08-opencl.pdf
 	// ===============================================================================
 	//processing results
-    #pragma omp target exit data map(from: pMem_conformations_current[:size_populations]) 
+    #pragma omp target exit data map(from: pMem_conformations_current[:size_populations])
     #pragma omp target exit data map(from: pMem_energies_current[:size_energies]) 
     cpu_final_populations = pMem_conformations_current;
     sim_state.cpu_energies.assign(pMem_energies_current, pMem_energies_current+size_energies);

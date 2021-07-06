@@ -41,12 +41,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define fast_acos_o -(fast_acos_a+fast_acos_b+fast_acos_c+fast_acos_d)
 
 #pragma omp declare target
-__forceinline__ float fmod_pi2(float x)
+inline float fmod_pi2(float x)
 {
 	return x-(int)(invpi2*x)*PI_TIMES_2;
 }
 
-__forceinline__ float fast_acos(float cosine)
+inline float fast_acos(float cosine)
 {
 	float x=fabs(cosine);
 	float x2=x*x;
@@ -57,9 +57,9 @@ __forceinline__ float fast_acos(float cosine)
 	return copysign(ac,cosine) + (cosine<0.0f)*PI_FLOAT;
 }
 
-__forceinline__ float4 cross(float3& u, float3& v)
+inline float4struct cross(float3struct& u, float3struct& v)
 {
-    float4 result;
+    float4struct result;
     result.x = u.y * v.z - v.y * u.z;
     result.y = v.x * u.z - u.x * v.z;
     result.z = u.x * v.y - v.x * u.y;
@@ -67,9 +67,9 @@ __forceinline__ float4 cross(float3& u, float3& v)
     return result;
 }
 
-__forceinline__ float4 cross(float4& u, float4& v)
+inline float4struct cross(float4struct& u, float4struct& v)
 {
-    float4 result;
+    float4struct result;
     result.x = u.y * v.z - v.y * u.z;
     result.y = v.x * u.z - u.x * v.z;
     result.z = u.x * v.y - v.x * u.y;
@@ -77,23 +77,23 @@ __forceinline__ float4 cross(float4& u, float4& v)
     return result;
 }
 
-__forceinline__ float4 quaternion_multiply(float4 a, float4 b)
+inline float4struct quaternion_multiply(float4struct a, float4struct b)
 {
-	float4 result = { a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y, // x
+	float4struct result = { a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y, // x
 			  a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x, // y
 			  a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w, // z
 			  a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z }; // w
 	return result;
 }
-__forceinline__ float4 quaternion_rotate(float4 v, float4 rot)
+inline float4struct quaternion_rotate(float4struct v, float4struct rot)
 {
-	float4 result;
+	float4struct result;
 	
-	float4 z = cross(rot,v);
+	float4struct z = cross(rot,v);
     z.x *= 2.0f;
     z.y *= 2.0f;
     z.z *= 2.0f;
-    float4 c = cross(rot, z); 
+    float4struct c = cross(rot, z); 
     result.x = v.x + z.x * rot.w + c.x;
     result.y = v.y + z.y * rot.w + c.y;    
     result.z = v.z + z.z * rot.w + c.z;
@@ -109,7 +109,7 @@ void gpu_calc_energy(
     float* pGenotype,
     float& energy,
     int& run_id,
-    float3* calc_coords,  
+    float3struct* calc_coords,  
     int idx,
     uint32_t teamSize,
     GpuData& cData,
@@ -141,7 +141,7 @@ void gpu_calc_energy(
 	}
 
 	// General rotation moving vector
-	float4 genrot_movingvec;
+	float4struct genrot_movingvec;
 	genrot_movingvec.x = pGenotype[0];
 	genrot_movingvec.y = pGenotype[1];
 	genrot_movingvec.z = pGenotype[2];
@@ -151,7 +151,7 @@ void gpu_calc_energy(
 	float theta       = pGenotype[4] * DEG_TO_RAD;
 	float genrotangle = pGenotype[5] * DEG_TO_RAD;
 
-	float4 genrot_unitvec;
+	float4struct genrot_unitvec;
 	float sin_angle = sin(theta);
 	float s2 = sin(genrotangle * 0.5f);
 	genrot_unitvec.x = s2*sin_angle*cos(phi);
@@ -181,15 +181,15 @@ void gpu_calc_energy(
 			uint atom_id = rotation_list_element & RLIST_ATOMID_MASK;
 
 			// Capturing atom coordinates
-			float4 atom_to_rotate;
+			float4struct atom_to_rotate;
                         atom_to_rotate.x = calc_coords[atom_id].x;
                         atom_to_rotate.y = calc_coords[atom_id].y;
             		atom_to_rotate.z = calc_coords[atom_id].z;
             		atom_to_rotate.w = 0.0f;
 
 			// initialize with general rotation values
-			float4 rotation_unitvec = genrot_unitvec;
-			float4 rotation_movingvec = genrot_movingvec;
+			float4struct rotation_unitvec = genrot_unitvec;
+			float4struct rotation_movingvec = genrot_movingvec;
 
 			if ((rotation_list_element & RLIST_GENROT_MASK) == 0) // If rotating around rotatable bond
 			{
@@ -212,7 +212,7 @@ void gpu_calc_energy(
 				atom_to_rotate.z -= rotation_movingvec.z;
 			}
 
-			float4 quatrot_left = rotation_unitvec;
+			float4struct quatrot_left = rotation_unitvec;
 			// Performing rotation
 			if ((rotation_list_element & RLIST_GENROT_MASK) != 0)	// If general rotation,
 										// two rotations should be performed
@@ -221,7 +221,7 @@ void gpu_calc_energy(
 				// Calculating quatrot_left*ref_orientation_quats_const,
 				// which means that reference orientation rotation is the first
 				uint rid4 = 4 * run_id;
-                float4 qt;
+                float4struct qt;
                 qt.x = cData.pKerconst_conform->ref_orientation_quats_const[rid4+0];
                 qt.y = cData.pKerconst_conform->ref_orientation_quats_const[rid4+1];
                 qt.z = cData.pKerconst_conform->ref_orientation_quats_const[rid4+2];
@@ -230,7 +230,7 @@ void gpu_calc_energy(
 			}
 
 			// Performing final movement and storing values
-            float4 qt = quaternion_rotate(atom_to_rotate,quatrot_left);
+            float4struct qt = quaternion_rotate(atom_to_rotate,quatrot_left);
 			calc_coords[atom_id].x = qt.x + rotation_movingvec.x;
 			calc_coords[atom_id].y = qt.y + rotation_movingvec.y;
 			calc_coords[atom_id].z = qt.z + rotation_movingvec.z;

@@ -27,8 +27,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "defines.h"
 #include "calcenergy.h"
 #include "GpuData.h"
-#include <cuda.h>
-#include <cuda_runtime_api.h>
 #include <omp.h>
 
 //#include "calcenergy.hpp"
