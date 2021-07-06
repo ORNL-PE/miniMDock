@@ -2,7 +2,7 @@
 #ifndef CALCENERGY_H
 #define CALCENERGY_H
 
-#include "constants.h"
+#include "typedefine.h"
 
 
 #pragma omp declare target
