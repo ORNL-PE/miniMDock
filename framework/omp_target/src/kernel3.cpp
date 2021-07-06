@@ -30,7 +30,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // on nr of atoms and nr of torsions of ligand are used
 #define SWAT3 // Third set of Solis-Wets hyperparameters by Andreas Tillack
 
-void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformations_next, float* pMem_energies_next, GpuData& cData, GpuDockparameters dockpars )
+void gpu_perform_LS( uint32_t pops_by_runs,
+		     uint32_t nthreads, 
+ 		     float* pMem_conformations_next, 
+		     float* pMem_energies_next, 
+	 	     GpuData& cData, 
+		     GpuDockparameters dockpars )
 
 //The GPU global function performs local search on the pre-defined entities of conformations_next.
 //The number of blocks which should be started equals to num_of_lsentities*num_of_runs.
@@ -41,12 +46,9 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 //subjected to local search, the entity with ID num_of_lsentities is selected instead of the first one (with ID 0).
 {
 
-    const int blockDim = nthreads;
     #pragma omp target
-    #pragma omp teams parallel num_teams(nblocks) thread_limit(nthreads)
-    //#pragma omp teams num_teams(nblocks) thread_limit(nthreads) 
-    //#pragma omp distribute
-    //for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)	
+    #pragma omp teams distribute
+    for (int idx = 0; idx < pops_by_runs; idx++)	
     {  //for teams
 
          float genotype_candidate[ACTUAL_GENOTYPE_LENGTH];
@@ -61,7 +63,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
          float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
          float offspring_energy;
          int entity_id;
-
+/*
 	 #pragma omp allocate(genotype_candidate) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(genotype_deviate) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(genotype_bias) allocator(omp_pteam_mem_alloc)
@@ -74,16 +76,11 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(offspring_energy) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(entity_id) allocator(omp_pteam_mem_alloc)
-        
-	 //size_t scratchpad = MAX_NUM_OF_ATOMS + 4*ACTUAL_GENOTYPE_LENGTH;
-         //#pragma omp parallel for\
-              //private(scratchpad)\
-              //allocator(omp_pteam_memalloc)
-         //for (int threadIdx = 0; threadIdx < nthreads; threadIdx++)
-         {  //for threads in a team
-
+  */
+      
               int teamIdx = omp_get_team_num();
               int threadIdx = omp_get_thread_num();
+	      int teamSize = omp_get_num_teams();
 	      float candidate_energy;
               int run_id;
 
@@ -115,7 +112,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
     size_t offset = (run_id * dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
 	for (uint32_t gene_counter = threadIdx;
 	     gene_counter < dockpars.num_of_genes;
-	     gene_counter+= blockDim) {
+	     gene_counter+= teamSize) {
         offspring_genotype[gene_counter] = pMem_conformations_next[offset + gene_counter];
 		genotype_bias[gene_counter] = 0.0f;
 	}
@@ -131,7 +128,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 		// New random deviate
 		for (uint32_t gene_counter = threadIdx;
 		     gene_counter < dockpars.num_of_genes;
-		     gene_counter+= blockDim)
+		     gene_counter+= teamSize)
 		{
 #ifdef SWAT3
 			genotype_deviate[gene_counter] = rho*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1)*(gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx) < gene_scale);
@@ -165,7 +162,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 		// Generating new genotype candidate
 		for (uint32_t gene_counter = threadIdx;
 		     gene_counter < dockpars.num_of_genes;
-		     gene_counter+= blockDim) {
+		     gene_counter+= teamSize) {
 			   genotype_candidate[gene_counter] = offspring_genotype[gene_counter] + 
 							      genotype_deviate[gene_counter]   + 
 							      genotype_bias[gene_counter];
@@ -196,7 +193,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 		{
 			for (uint32_t gene_counter = threadIdx;
 			     gene_counter < dockpars.num_of_genes;
-			     gene_counter+= blockDim)
+			     gene_counter+= teamSize)
 			{
 				// Updating offspring_genotype
 				offspring_genotype[gene_counter] = genotype_candidate[gene_counter];
@@ -221,7 +218,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 			// Generating the other genotype candidate
 			for (uint32_t gene_counter = threadIdx;
 			     gene_counter < dockpars.num_of_genes;
-			     gene_counter+= blockDim) {
+			     gene_counter+= teamSize) {
 				   genotype_candidate[gene_counter] = offspring_genotype[gene_counter] - 
 								      genotype_deviate[gene_counter] - 
 								      genotype_bias[gene_counter];
@@ -256,7 +253,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 			{
 				for (uint32_t gene_counter = threadIdx;
 				     gene_counter < dockpars.num_of_genes;
-			       	     gene_counter+= blockDim)
+			       	     gene_counter+= teamSize)
 				{
 					// Updating offspring_genotype
 					offspring_genotype[gene_counter] = genotype_candidate[gene_counter];
@@ -280,7 +277,7 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
 			{
 				for (uint32_t gene_counter = threadIdx;
 				     gene_counter < dockpars.num_of_genes;
-				     gene_counter+= blockDim)
+				     gene_counter+= teamSize)
 					   // Updating genotype_bias
 					   genotype_bias[gene_counter] = 0.5f*genotype_bias[gene_counter];
 
@@ -322,14 +319,13 @@ void gpu_perform_LS( uint32_t nblocks, uint32_t nthreads, float* pMem_conformati
         offset = (run_id*dockpars.pop_size+entity_id)*GENOTYPE_LENGTH_IN_GLOBMEM;
 	for (uint32_t gene_counter = threadIdx;
 	     gene_counter < dockpars.num_of_genes;
-	     gene_counter+= blockDim) {
+	     gene_counter+= teamSize) {
         if (gene_counter >= 3) {
 		    map_angle(offspring_genotype[gene_counter]);
 		}
         pMem_conformations_next[offset + gene_counter] = offspring_genotype[gene_counter];
 	}
 
-    }// End for a team of threads
    }// End for a set of teams
 }
 

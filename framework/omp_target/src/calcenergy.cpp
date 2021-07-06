@@ -111,7 +111,7 @@ void gpu_calc_energy(
     int& run_id,
     float3* calc_coords,  
     int idx,
-    uint32_t blockDim,
+    uint32_t teamSize,
     GpuData& cData,
     GpuDockparameters dockpars
 ) 
@@ -130,10 +130,10 @@ void gpu_calc_energy(
 #endif
 	// Initializing gradients (forces) 
 	// Derived from autodockdev/maps.py
-//	#pragma omp parallel for
+	//#pragma omp parallel for
 	for (uint atom_id = idx;
 		  atom_id < dockpars.num_of_atoms;
-		  atom_id+= blockDim) {
+		  atom_id+= teamSize) {
 		// Initialize coordinates
         calc_coords[atom_id].x = cData.pKerconst_conform->ref_coords_const[3*atom_id];
         calc_coords[atom_id].y = cData.pKerconst_conform->ref_coords_const[3*atom_id+1];
@@ -172,7 +172,7 @@ void gpu_calc_energy(
 //	#pragma omp parallel for
 	for (uint rotation_counter  = idx;
 	          rotation_counter  < dockpars.rotbondlist_length;
-	          rotation_counter += blockDim)
+	          rotation_counter += teamSize)
 	{
 		int rotation_list_element = cData.pKerconst_rotlist->rotlist_const[rotation_counter];
 
@@ -247,7 +247,7 @@ void gpu_calc_energy(
 //	#pragma omp parallel for
 	for (uint atom_id = idx;
 	          atom_id < dockpars.num_of_atoms;
-	          atom_id+= blockDim)
+	          atom_id+= teamSize)
 	{
 		uint atom_typeid = cData.pKerconst_interintra->atom_types_map_const[atom_id];
 		float x = calc_coords[atom_id].x;
@@ -329,7 +329,7 @@ void gpu_calc_energy(
 //	#pragma omp parallel for
 	for (uint contributor_counter = idx;
 	          contributor_counter < dockpars.num_of_intraE_contributors;
-	          contributor_counter += blockDim)
+	          contributor_counter += teamSize)
 
 	{
 

@@ -23,30 +23,25 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "kernels.hpp"
 
-void gpu_sum_evals(uint32_t blocks, 
+void gpu_sum_evals(uint32_t nruns, 
                    uint32_t threadsPerBlock, 
                    GpuData& cData,
                    GpuDockparameters dockpars)
 {
-    int sum_evals = 0;
-    int teamIdx = 0;
     #pragma omp target
-    #pragma omp teams num_teams(blocks) thread_limit(threadsPerBlock)\
-    //reduction(+:sum_evals)
-    {
-    #pragma omp distribute
-    for (int Idx = 0; Idx < dockpars.pop_size; Idx += threadsPerBlock ) {
+    #pragma omp teams distribute
+    for (int idx = 0; idx < nruns; idx++ ) {
     
-        teamIdx = omp_get_team_num();
-        //int sum_evals = 0;
+        int teamIdx = omp_get_team_num();
+        int threadIdx = omp_get_thread_num();
+        int sum_evals = 0;
     	int* pEvals_of_new_entities = cData.pMem_evals_of_new_entities + teamIdx * dockpars.pop_size;
         #pragma omp parallel for reduction(+:sum_evals)	
         for (int entity_counter = Idx; entity_counter < dockpars.pop_size; entity_counter++) 
         {
 	    sum_evals += pEvals_of_new_entities[entity_counter];
 	}
-   }
-	if(omp_get_thread_num() == 0) cData.pMem_gpu_evals_of_runs[teamIdx] += sum_evals;
+	if(threadIdx == 0) cData.pMem_gpu_evals_of_runs[teamIdx] += sum_evals;
    }// End for teams
 }
 

@@ -29,7 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 //#define DEBUG_ENERGY_KERNEL4
 
 void gpu_gen_and_eval_newpops(
-    uint32_t nblocks,
+    uint32_t pops_by_runs,
     uint32_t threadsPerBlock,
     float* pMem_conformations_current,
     float* pMem_energies_current,
@@ -39,11 +39,9 @@ void gpu_gen_and_eval_newpops(
     GpuDockparameters dockpars
 )
 {
-    const int blockDim = threadsPerBlock;
     #pragma omp target
-    #pragma omp teams parallel num_teams(nblocks) thread_limit(threadsPerBlock)
-    //#pragma omp teams distribute num_teams(nblocks) thread_limit(threadsPerBlock)
-    //for (int blockIdx = 0; blockIdx < nblocks; blockIdx++)
+    #pragma omp teams distribute 
+    for (int idx = 0; idx < pops_by_runs; idx++)
     {
 	 float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
 	 int parent_candidates[4];
@@ -54,7 +52,7 @@ void gpu_gen_and_eval_newpops(
          float sBestEnergy[32];
          int sBestID[32];
 	 float3 calc_coords[MAX_NUM_OF_ATOMS];
-
+/*
 	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)	 
 	 #pragma omp allocate(parent_candidates) allocator(omp_pteam_mem_alloc)	 
 	 #pragma omp allocate(candidate_energies) allocator(omp_pteam_mem_alloc)	 
@@ -64,13 +62,10 @@ void gpu_gen_and_eval_newpops(
 	 #pragma omp allocate(sBestEnergy) allocator(omp_pteam_mem_alloc)	 
 	 #pragma omp allocate(sBestID) allocator(omp_pteam_mem_alloc)	 
 	 #pragma omp allocate(calc_coords) allocator(omp_pteam_mem_alloc)	 
-
-	// #pragma omp parallel for
-        // for( int idx = 0; idx < threadsPerBlock; idx++)
-	 { 
+*/
             int teamIdx = omp_get_team_num();
-           // int threadIdx = idx;
             int threadIdx = omp_get_thread_num();
+	    int teamSize = omp_get_num_teams();
  
 	    int run_id;    
 	    int temp_covr_point;
@@ -91,8 +86,8 @@ void gpu_gen_and_eval_newpops(
                energy = FLT_MAX;
             }
         
-            // Scan through population (we already picked up a blockDim's worth above so skip)
-            for (int i = teamIdx + blockDim + threadIdx; i < teamIdx + dockpars.pop_size; i += blockDim)
+            // Scan through population (we already picked up a teamSize's worth above so skip)
+            for (int i = teamIdx + teamSize + threadIdx; i < teamIdx + dockpars.pop_size; i += teamSize)
             {
                float e = pMem_energies_current[i];
                if (e < energy)
@@ -115,7 +110,7 @@ void gpu_gen_and_eval_newpops(
             // Copy best genome to next generation
             int dOffset = teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
             int sOffset = sBestID[0] * GENOTYPE_LENGTH_IN_GLOBMEM;
-            for (int i = threadIdx ; i < dockpars.num_of_genes; i += blockDim)
+            for (int i = threadIdx ; i < dockpars.num_of_genes; i += teamSize)
             {
                 pMem_conformations_next[dOffset + i] = pMem_conformations_current[sOffset + i];
             }
@@ -128,7 +123,7 @@ void gpu_gen_and_eval_newpops(
 		// [7..8] for crossover points, [9] for local search
 		for (uint32_t gene_counter = threadIdx;
 		     gene_counter < 10;
-		     gene_counter += blockDim) {
+		     gene_counter += teamSize) {
 			 randnums[gene_counter] = gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx);
 		}
 #if 0
@@ -201,7 +196,7 @@ void gpu_gen_and_eval_newpops(
 
 			for (uint32_t gene_counter = threadIdx;
 			     gene_counter < dockpars.num_of_genes;
-			     gene_counter+= blockDim)
+			     gene_counter+= teamSize)
 			{
 				// Two-point crossover
 				if (covr_point[0] != covr_point[1]) 
@@ -225,7 +220,7 @@ void gpu_gen_and_eval_newpops(
 		{
             		for (uint32_t gene_counter = threadIdx;
 			     gene_counter < dockpars.num_of_genes;
-			     gene_counter+= blockDim)
+			     gene_counter+= teamSize)
             		{
                 		offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter];
             		}
@@ -236,7 +231,7 @@ void gpu_gen_and_eval_newpops(
 		// Performing mutation
 		for (uint32_t gene_counter = threadIdx;
 		     gene_counter < dockpars.num_of_genes;
-		     gene_counter+= blockDim)
+		     gene_counter+= teamSize)
 		{
 			// Notice: dockpars_mutation_rate was scaled down to [0,1] in host
 			// to reduce number of operations in device
@@ -282,7 +277,7 @@ void gpu_gen_and_eval_newpops(
 		// Copying new offspring to next generation
         for (uint32_t gene_counter = threadIdx;
 		     gene_counter < dockpars.num_of_genes;
-		     gene_counter+= blockDim)
+		     gene_counter+= teamSize)
         {
             pMem_conformations_next[teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter] = offspring_genotype[gene_counter];
         }        
