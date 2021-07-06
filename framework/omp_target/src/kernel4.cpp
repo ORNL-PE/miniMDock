@@ -100,8 +100,8 @@ void gpu_gen_and_eval_newpops(
            // Reduce to shared memory ( by warp?)
             if (threadIdx == 0)
             {
-                pMem_energies_next[blockIdx] = energy;
-                cData.pMem_evals_of_new_entities[blockIdx] = 0;
+                pMem_energies_next[teamIdx] = energy;
+                cData.pMem_evals_of_new_entities[teamIdx] = 0;
                 sBestID[0] = bestID;
             }
         
@@ -283,7 +283,6 @@ void gpu_gen_and_eval_newpops(
         }        
 
       }
-    }  // End for a team
     }  // End for a set of teams
 }
 

@@ -781,7 +781,7 @@ filled with clock() */
 	{
 		if (mypars->autostop) {
                         if (generation_cnt % mypars->as_frequency == 0) {
-				#pragma omp target update data from(pMem_energies_current[:size_energies])
+				#pragma omp target update from(pMem_energies_current[:size_energies])
 				sim_state.cpu_energies.assign(pMem_energies_current, pMem_energies_current+size_energies);
                                 if (autostop.check_if_satisfactory(generation_cnt, sim_state.cpu_energies.data(), total_evals))
                                         break; // Exit loop
