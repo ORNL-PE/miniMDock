@@ -178,36 +178,19 @@ void setup_gpu_for_docking(GpuData& cData, GpuTempData& tData)
     printf("\nCUDA Setup time %fs\n", elapsed_seconds(t0 ,t1));
 */
 
-	size_t sz_intracontrib_const	= 3*MAX_NUM_OF_ATOMS*4;
-//	size_t sz_intracontrib_const	= 3*MAX_INTRAE_CONTRIBUTORS;
-
-	size_t sz_intra_const		= ATYPE_NUM + 
-					  ATYPE_NUM + 
-					  ATYPE_NUM + 
-					  ATYPE_NUM + 
-				          MAX_NUM_OF_ATYPES*MAX_NUM_OF_ATYPES + 
-					  MAX_NUM_OF_ATYPES*MAX_NUM_OF_ATYPES + 
-					  MAX_NUM_OF_ATYPES + 
-					  MAX_NUM_OF_ATYPES;
-
-	size_t sz_rotlist_const		= MAX_NUM_OF_ROTATIONS;
-
-	size_t sz_conform_const		= 3*MAX_NUM_OF_ATOMS + 
-					  3*MAX_NUM_OF_ROTBONDS + 
-					  3*MAX_NUM_OF_ROTBONDS + 
-					  4*MAX_NUM_OF_RUNS;
-
-        size_t sz_interintra_const      = MAX_NUM_OF_ATOMS +
-                                          MAX_NUM_OF_ATOMS +
-                                          MAX_NUM_OF_ATOMS;
+    size_t sz_interintra_const      = 3*MAX_NUM_OF_ATOMS;
+    size_t sz_intracontrib_const    = 3*MAX_INTRAE_CONTRIBUTORS;
+    size_t sz_intra_const           = 4*ATYPE_NUM + 2*MAX_NUM_OF_ATYPES*MAX_NUM_OF_ATYPES +2*MAX_NUM_OF_ATYPES;
+    size_t sz_rotlist_const         = MAX_NUM_OF_ROTATIONS;
+    size_t sz_conform_const         = 3*MAX_NUM_OF_ATOMS +6*MAX_NUM_OF_ROTBONDS +4*MAX_NUM_OF_RUNS;
 	
-    
+   printf("MAX_INTRAE_CONTRIBUTORS = %d \n", MAX_INTRAE_CONTRIBUTORS); 
    // Allocate kernel constant GPU memory
-    cData.pKerconst_interintra = (kernelconstant_interintra *) calloc(sz_interintra_const, sizeof(*cData.pKerconst_interintra));
-    cData.pKerconst_intracontrib = (kernelconstant_intracontrib *) calloc(sz_intracontrib_const, sizeof(*cData.pKerconst_intracontrib));
-    cData.pKerconst_intra = (kernelconstant_intra *) calloc( sz_intra_const, sizeof(*cData.pKerconst_intra));
-    cData.pKerconst_rotlist = (kernelconstant_rotlist *) calloc( sz_rotlist_const, sizeof(*cData.pKerconst_rotlist));
-    cData.pKerconst_conform = (kernelconstant_conform *) calloc( sz_conform_const, sizeof(*cData.pKerconst_conform));
+    cData.pKerconst_interintra = (kernelconstant_interintra *) calloc(1, sizeof(*cData.pKerconst_interintra));
+    cData.pKerconst_intracontrib = (kernelconstant_intracontrib *) calloc(1, sizeof(*cData.pKerconst_intracontrib));
+    cData.pKerconst_intra = (kernelconstant_intra *) calloc( 1, sizeof(*cData.pKerconst_intra));
+    cData.pKerconst_rotlist = (kernelconstant_rotlist *) calloc( 1, sizeof(*cData.pKerconst_rotlist));
+    cData.pKerconst_conform = (kernelconstant_conform *) calloc( 1, sizeof(*cData.pKerconst_conform));
 
     size_t sz_angle_const = 1000;
     size_t sz_rotbonds_const = 2*MAX_NUM_OF_ROTBONDS;
@@ -224,19 +207,10 @@ void setup_gpu_for_docking(GpuData& cData, GpuTempData& tData)
     #pragma omp target enter data map(to: cData)
 
     #pragma omp target enter data map(to: cData.pKerconst_interintra) 
-    #pragma omp target enter data map(to: cData.pKerconst_interintra[:sz_interintra_const])
-    
     #pragma omp target enter data map(to: cData.pKerconst_intra)
-    #pragma omp target enter data map(to: cData.pKerconst_intra[:sz_intra_const])
-    
     #pragma omp target enter data map(to: cData.pKerconst_rotlist)
-    #pragma omp target enter data map(to: cData.pKerconst_rotlist[:sz_rotlist_const])
-  
     #pragma omp target enter data map(to: cData.pKerconst_conform)
-    #pragma omp target enter data map(to: cData.pKerconst_conform[:sz_conform_const] )
-
     #pragma omp target enter data map(to: cData.pKerconst_intracontrib)
-    #pragma omp target enter data map(to: cData.pKerconst_intracontrib[:sz_intracontrib_const])
     
     #pragma omp target enter data map(to: cData.pMem_angle_const)
     #pragma omp target enter data map(to: cData.pMem_angle_const[:sz_angle_const])
@@ -477,7 +451,21 @@ filled with clock() */
     cData.pKerconst_intra = &KerConst_intra;
     cData.pKerconst_rotlist = &KerConst_rotlist;
     cData.pKerconst_conform = &KerConst_conform;
+/*
  
+    size_t sz_interintra_const      = 3*MAX_NUM_OF_ATOMS;
+    size_t sz_intracontrib_const    = 3*MAX_INTRAE_CONTRIBUTORS;
+    size_t sz_intra_const           = 4*ATYPE_NUM + 2*MAX_NUM_OF_ATYPES*MAX_NUM_OF_ATYPES +2*MAX_NUM_OF_ATYPES;
+    size_t sz_rotlist_const         = MAX_NUM_OF_ROTATIONS;
+    size_t sz_conform_const         = 3*MAX_NUM_OF_ATOMS +6*MAX_NUM_OF_ROTBONDS +4*MAX_NUM_OF_RUNS;
+
+
+    #pragma omp target enter data map(to: cData.pKerconst_interintra[:sz_interintra_const])
+    #pragma omp target enter data map(to: cData.pKerconst_intracontrib[:sz_intracontrib_const])
+    #pragma omp target enter data map(to: cData.pKerconst_intra[:sz_intra_const])
+    #pragma omp target enter data map(to: cData.pKerconst_rotlist[:sz_rotlist_const])
+    #pragma omp target enter data map(to: cData.pKerconst_conform[:sz_conform_const])
+
     #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_charges_const)
     #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_types_const)
     #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_types_map_const)
@@ -495,10 +483,11 @@ filled with clock() */
     #pragma omp target enter data map(to: cData.pKerconst_rotlist->rotlist_const)
 
     #pragma omp target enter data map(to: cData.pKerconst_conform->ref_coords_const)
-  //  #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_moving_vectors_const)
-  //  #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_unit_vectors_const)
-  //  #pragma omp target enter data map(to: cData.pKerconst_conform->ref_orientation_quats_const)
+    #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_moving_vectors_const)
+    #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_unit_vectors_const)
+    #pragma omp target enter data map(to: cData.pKerconst_conform->ref_orientation_quats_const)
     
+*/
     
     cData.pMem_rotbonds_const = KerConst_grads.rotbonds;
     cData.pMem_rotbonds_atoms_const = KerConst_grads.rotbonds_atoms;
