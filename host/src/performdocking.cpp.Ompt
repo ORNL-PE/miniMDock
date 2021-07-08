@@ -178,13 +178,7 @@ void setup_gpu_for_docking(GpuData& cData, GpuTempData& tData)
     printf("\nCUDA Setup time %fs\n", elapsed_seconds(t0 ,t1));
 */
 
-    size_t sz_interintra_const      = 3*MAX_NUM_OF_ATOMS;
-    size_t sz_intracontrib_const    = 3*MAX_INTRAE_CONTRIBUTORS;
-    size_t sz_intra_const           = 4*ATYPE_NUM + 2*MAX_NUM_OF_ATYPES*MAX_NUM_OF_ATYPES +2*MAX_NUM_OF_ATYPES;
-    size_t sz_rotlist_const         = MAX_NUM_OF_ROTATIONS;
-    size_t sz_conform_const         = 3*MAX_NUM_OF_ATOMS +6*MAX_NUM_OF_ROTBONDS +4*MAX_NUM_OF_RUNS;
 	
-   printf("MAX_INTRAE_CONTRIBUTORS = %d \n", MAX_INTRAE_CONTRIBUTORS); 
    // Allocate kernel constant GPU memory
     cData.pKerconst_interintra = (kernelconstant_interintra *) calloc(1, sizeof(*cData.pKerconst_interintra));
     cData.pKerconst_intracontrib = (kernelconstant_intracontrib *) calloc(1, sizeof(*cData.pKerconst_intracontrib));
@@ -427,6 +421,7 @@ filled with clock() */
 	if (prepare_const_fields_for_gpu(&myligand_reference, mypars, cpu_ref_ori_angles, &KerConst) == 1)
 		return 1;
 */
+/*
     //GpuData cData; //JL Now pass this in
     	kernelconstant_interintra 	KerConst_interintra;
 	kernelconstant_intracontrib 	KerConst_intracontrib;
@@ -451,44 +446,18 @@ filled with clock() */
     cData.pKerconst_intra = &KerConst_intra;
     cData.pKerconst_rotlist = &KerConst_rotlist;
     cData.pKerconst_conform = &KerConst_conform;
-/*
- 
-    size_t sz_interintra_const      = 3*MAX_NUM_OF_ATOMS;
-    size_t sz_intracontrib_const    = 3*MAX_INTRAE_CONTRIBUTORS;
-    size_t sz_intra_const           = 4*ATYPE_NUM + 2*MAX_NUM_OF_ATYPES*MAX_NUM_OF_ATYPES +2*MAX_NUM_OF_ATYPES;
-    size_t sz_rotlist_const         = MAX_NUM_OF_ROTATIONS;
-    size_t sz_conform_const         = 3*MAX_NUM_OF_ATOMS +6*MAX_NUM_OF_ROTBONDS +4*MAX_NUM_OF_RUNS;
-
-
-    #pragma omp target enter data map(to: cData.pKerconst_interintra[:sz_interintra_const])
-    #pragma omp target enter data map(to: cData.pKerconst_intracontrib[:sz_intracontrib_const])
-    #pragma omp target enter data map(to: cData.pKerconst_intra[:sz_intra_const])
-    #pragma omp target enter data map(to: cData.pKerconst_rotlist[:sz_rotlist_const])
-    #pragma omp target enter data map(to: cData.pKerconst_conform[:sz_conform_const])
-
-    #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_charges_const)
-    #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_types_const)
-    #pragma omp target enter data map(to: cData.pKerconst_interintra->atom_types_map_const)
-    
-    #pragma omp target enter data map(to: cData.pKerconst_intracontrib->intraE_contributors_const)
-    
-    #pragma omp target enter data map(to: cData.pKerconst_intra->reqm_const)
-    #pragma omp target enter data map(to: cData.pKerconst_intra->atom1_types_reqm_const)
-    #pragma omp target enter data map(to: cData.pKerconst_intra->atom2_types_reqm_const)
-    #pragma omp target enter data map(to: cData.pKerconst_intra->VWpars_AC_const)
-    #pragma omp target enter data map(to: cData.pKerconst_intra->VWpars_BD_const)
-    #pragma omp target enter data map(to: cData.pKerconst_intra->dspars_S_const)
-    #pragma omp target enter data map(to: cData.pKerconst_intra->dspars_V_const)
-    
-    #pragma omp target enter data map(to: cData.pKerconst_rotlist->rotlist_const)
-
-    #pragma omp target enter data map(to: cData.pKerconst_conform->ref_coords_const)
-    #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_moving_vectors_const)
-    #pragma omp target enter data map(to: cData.pKerconst_conform->rotbonds_unit_vectors_const)
-    #pragma omp target enter data map(to: cData.pKerconst_conform->ref_orientation_quats_const)
-    
 */
-    
+        kernelconstant_grads            KerConst_grads;
+     if (prepare_const_fields_for_gpu(&myligand_reference, mypars, sim_state.cpu_ref_ori_angles.data(),
+                                         cData.pKerconst_interintra,
+                                         cData.pKerconst_intracontrib,
+                                         cData.pKerconst_intra,
+                                         cData.pKerconst_rotlist,
+                                         cData.pKerconst_conform,
+                                         &KerConst_grads) == 1) {
+                return 1;
+        }
+
     cData.pMem_rotbonds_const = KerConst_grads.rotbonds;
     cData.pMem_rotbonds_atoms_const = KerConst_grads.rotbonds_atoms;
     cData.pMem_num_rotating_atoms_per_rotbond_const = KerConst_grads.num_rotating_atoms_per_rotbond;
