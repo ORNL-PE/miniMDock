@@ -34,7 +34,7 @@ void gpu_calc_initpop(	uint32_t pops_by_runs,
 {
 
     #pragma omp target 
-    #pragma omp teams distribute 
+    #pragma omp teams distribute parallel for 
     for (int idx = 0; idx < pops_by_runs; idx++)
     {  
         float3struct calc_coords[MAX_NUM_OF_ATOMS];
@@ -43,9 +43,10 @@ void gpu_calc_initpop(	uint32_t pops_by_runs,
         float  energy = 0.0f;
         int teamIdx = omp_get_team_num();
         int threadIdx = omp_get_thread_num();
+        int teamSize = omp_get_num_threads();
         int run_id = teamIdx / dockpars.pop_size;
         float* pGenotype = pMem_conformations_current + teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
-	gpu_calc_energy( pGenotype, energy, run_id, calc_coords, threadIdx, threadsPerBlock, cData, dockpars );
+	gpu_calc_energy( pGenotype, energy, run_id, calc_coords, threadIdx, teamSize, cData, dockpars );
 	
         // Write out final energy
         if (threadIdx == 0){

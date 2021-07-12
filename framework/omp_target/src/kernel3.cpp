@@ -47,7 +47,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 {
 
     #pragma omp target
-    #pragma omp teams distribute
+    #pragma omp teams distribute parallel for
     for (int idx = 0; idx < pops_by_runs; idx++)	
     {  //for teams
 
@@ -63,7 +63,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
          float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
          float offspring_energy;
          int entity_id;
-/*
+
 	 #pragma omp allocate(genotype_candidate) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(genotype_deviate) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(genotype_bias) allocator(omp_pteam_mem_alloc)
@@ -76,11 +76,11 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(offspring_energy) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(entity_id) allocator(omp_pteam_mem_alloc)
-  */
+  
       
               int teamIdx = omp_get_team_num();
               int threadIdx = omp_get_thread_num();
-	      int teamSize = omp_get_num_teams();
+	      int teamSize = omp_get_num_threads();
 	      float candidate_energy;
               int run_id;
 
