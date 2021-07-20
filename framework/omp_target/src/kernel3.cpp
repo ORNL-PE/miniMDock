@@ -31,7 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #define SWAT3 // Third set of Solis-Wets hyperparameters by Andreas Tillack
 
 void gpu_perform_LS( uint32_t pops_by_runs,
-		     uint32_t nthreads, 
+		     uint32_t work_pteam, 
  		     float* pMem_conformations_next, 
 		     float* pMem_energies_next, 
 	 	     GpuData& cData, 
@@ -46,8 +46,8 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 //subjected to local search, the entity with ID num_of_lsentities is selected instead of the first one (with ID 0).
 {
 
-    #pragma omp target
-    #pragma omp teams distribute parallel for
+    #pragma omp target teams distribute 
+//     num_teams(pops_by_runs) thread_limit(work_pteam)
     for (int idx = 0; idx < pops_by_runs; idx++)	
     {  //for teams
 
@@ -63,7 +63,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
          float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
          float offspring_energy;
          int entity_id;
-
+/*
 	 #pragma omp allocate(genotype_candidate) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(genotype_deviate) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(genotype_bias) allocator(omp_pteam_mem_alloc)
@@ -76,27 +76,26 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(offspring_energy) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(entity_id) allocator(omp_pteam_mem_alloc)
-  
-      
-              int teamIdx = omp_get_team_num();
-              int threadIdx = omp_get_thread_num();
-	      int teamSize = omp_get_num_threads();
+  */
+         #pragma omp parallel for
+         for(int j =0; j< work_pteam; j++ ){             
+ 
 	      float candidate_energy;
               int run_id;
 
 	// Determining run ID and entity ID
 	// Initializing offspring genotype
-              run_id = teamIdx / dockpars.num_of_lsentities;
-	      if (threadIdx == 0)
+              run_id = idx / dockpars.num_of_lsentities;
+	      if (j == 0)
 	      {
-                  entity_id = teamIdx % dockpars.num_of_lsentities;
+                  entity_id = idx % dockpars.num_of_lsentities;
 
 		// Since entity 0 is the best one due to elitism,
 		// it should be subjected to random selection
 		if (entity_id == 0) {
 			// If entity 0 is not selected according to LS-rate,
 			// choosing an other entity
-			if (100.0f*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx) > dockpars.lsearch_rate) {
+			if (100.0f*gpu_randf(cData.pMem_prng_states, idx, j) > dockpars.lsearch_rate) {
 				entity_id = dockpars.num_of_lsentities;					
 			}
 		}
@@ -110,9 +109,9 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 	      }
 //--- thread barrier
     size_t offset = (run_id * dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
-	for (uint32_t gene_counter = threadIdx;
+	for (uint32_t gene_counter = j;
 	     gene_counter < dockpars.num_of_genes;
-	     gene_counter+= teamSize) {
+	     gene_counter+= work_pteam) {
         offspring_genotype[gene_counter] = pMem_conformations_next[offset + gene_counter];
 		genotype_bias[gene_counter] = 0.0f;
 	}
@@ -126,12 +125,12 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 	while ((iteration_cnt < dockpars.max_num_of_iters) && (rho > dockpars.rho_lower_bound))
 	{
 		// New random deviate
-		for (uint32_t gene_counter = threadIdx;
+		for (uint32_t gene_counter = j;
 		     gene_counter < dockpars.num_of_genes;
-		     gene_counter+= teamSize)
+		     gene_counter+= work_pteam)
 		{
 #ifdef SWAT3
-			genotype_deviate[gene_counter] = rho*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1)*(gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx) < gene_scale);
+			genotype_deviate[gene_counter] = rho*(2*gpu_randf(cData.pMem_prng_states, idx, j)-1)*(gpu_randf(cData.pMem_prng_states, idx, j) < gene_scale);
 
 			// Translation genes
 			if (gene_counter < 3) {
@@ -146,7 +145,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 				}
 			}
 #else
-			genotype_deviate[gene_counter] = rho*(2*gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)-1)*(gpu_randf(cData.pMem_prng_states, teamIdx, threadIdx)<0.3f);
+			genotype_deviate[gene_counter] = rho*(2*gpu_randf(cData.pMem_prng_states, idx, j)-1)*(gpu_randf(cData.pMem_prng_states, idx, j)<0.3f);
 
 			// Translation genes
 			if (gene_counter < 3) {
@@ -160,9 +159,9 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 		}
 
 		// Generating new genotype candidate
-		for (uint32_t gene_counter = threadIdx;
+		for (uint32_t gene_counter = j;
 		     gene_counter < dockpars.num_of_genes;
-		     gene_counter+= teamSize) {
+		     gene_counter+= work_pteam) {
 			   genotype_candidate[gene_counter] = offspring_genotype[gene_counter] + 
 							      genotype_deviate[gene_counter]   + 
 							      genotype_bias[gene_counter];
@@ -177,23 +176,23 @@ void gpu_perform_LS( uint32_t pops_by_runs,
                 candidate_energy,
                 run_id,
                 calc_coords,
-		threadIdx,
-	        nthreads,
+		j,
+	        work_pteam,
 		cData,
                 dockpars
 				);
 		// =================================================================
 
-		if (threadIdx == 0) {
+		if (j == 0) {
 			evaluation_cnt++;
 		}
 //--- thread barrier
 
 		if (candidate_energy < offspring_energy)	// If candidate is better, success
 		{
-			for (uint32_t gene_counter = threadIdx;
+			for (uint32_t gene_counter = j;
 			     gene_counter < dockpars.num_of_genes;
-			     gene_counter+= teamSize)
+			     gene_counter+= work_pteam)
 			{
 				// Updating offspring_genotype
 				offspring_genotype[gene_counter] = genotype_candidate[gene_counter];
@@ -206,7 +205,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 			// used in the previous if condition
 //--- thread barrier
 
-			if (threadIdx == 0)
+			if (j == 0)
 			{
 				offspring_energy = candidate_energy;
 				cons_succ++;
@@ -216,9 +215,9 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 		else	// If candidate is worser, check the opposite direction
 		{
 			// Generating the other genotype candidate
-			for (uint32_t gene_counter = threadIdx;
+			for (uint32_t gene_counter = j;
 			     gene_counter < dockpars.num_of_genes;
-			     gene_counter+= teamSize) {
+			     gene_counter+= work_pteam) {
 				   genotype_candidate[gene_counter] = offspring_genotype[gene_counter] - 
 								      genotype_deviate[gene_counter] - 
 								      genotype_bias[gene_counter];
@@ -233,14 +232,14 @@ void gpu_perform_LS( uint32_t pops_by_runs,
                 	candidate_energy,
                 	run_id,
                 	calc_coords,
-	        	threadIdx,
-                	nthreads,
+	        	j,
+                	work_pteam,
   			cData,
                         dockpars
             		);
 			// =================================================================
 
-			if (threadIdx == 0) {
+			if (j == 0) {
 				evaluation_cnt++;
 
 				#if defined (DEBUG_ENERGY_KERNEL)
@@ -251,9 +250,9 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 
 			if (candidate_energy < offspring_energy) // If candidate is better, success
 			{
-				for (uint32_t gene_counter = threadIdx;
+				for (uint32_t gene_counter = j;
 				     gene_counter < dockpars.num_of_genes;
-			       	     gene_counter+= teamSize)
+			       	     gene_counter+= work_pteam)
 				{
 					// Updating offspring_genotype
 					offspring_genotype[gene_counter] = genotype_candidate[gene_counter];
@@ -266,7 +265,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 				// used in the previous if condition
 //--- thread barrier
 
-				if (threadIdx == 0)
+				if (j == 0)
 				{
 					offspring_energy = candidate_energy;
 					cons_succ++;
@@ -275,13 +274,13 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 			}
 			else	// Failure in both directions
 			{
-				for (uint32_t gene_counter = threadIdx;
+				for (uint32_t gene_counter = j;
 				     gene_counter < dockpars.num_of_genes;
-				     gene_counter+= teamSize)
+				     gene_counter+= work_pteam)
 					   // Updating genotype_bias
 					   genotype_bias[gene_counter] = 0.5f*genotype_bias[gene_counter];
 
-				if (threadIdx == 0)
+				if (j == 0)
 				{
 					cons_succ = 0;
 					cons_fail++;
@@ -290,7 +289,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 		}
 
 		// Changing rho if needed
-		if (threadIdx == 0)
+		if (j == 0)
 		{
 			iteration_cnt++;
 
@@ -310,22 +309,23 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 	}
 
 	// Updating eval counter and energy
-	if (threadIdx == 0) {
+	if (j == 0) {
 		cData.pMem_evals_of_new_entities[run_id*dockpars.pop_size+entity_id] += evaluation_cnt;
 		pMem_energies_next[run_id*dockpars.pop_size+entity_id] = offspring_energy;
 	}
 
 	// Mapping torsion angles and writing out results
         offset = (run_id*dockpars.pop_size+entity_id)*GENOTYPE_LENGTH_IN_GLOBMEM;
-	for (uint32_t gene_counter = threadIdx;
+	for (uint32_t gene_counter = j;
 	     gene_counter < dockpars.num_of_genes;
-	     gene_counter+= teamSize) {
+	     gene_counter+= work_pteam) {
         if (gene_counter >= 3) {
 		    map_angle(offspring_genotype[gene_counter]);
 		}
         pMem_conformations_next[offset + gene_counter] = offspring_genotype[gene_counter];
 	}
 
+     }
    }// End for a set of teams
 }
 

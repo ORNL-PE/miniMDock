@@ -24,32 +24,31 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "kernels.hpp"
 
 void gpu_sum_evals(uint32_t nruns, 
-                   uint32_t threadsPerBlock, 
+                   uint32_t work_pteam, 
                    GpuData& cData,
                    GpuDockparameters dockpars)
 {
-    #pragma omp target
-    #pragma omp teams distribute parallel for
+    #pragma omp target teams distribute
     for (int idx = 0; idx < nruns; idx++ ) {
     
         int sum_evals = 0;
-        #pragma omp allocate(sum_evals) allocator(omp_pteam_mem_alloc)
+    //    #pragma omp allocate(sum_evals) allocator(omp_pteam_mem_alloc)
 
-        int teamIdx = omp_get_team_num();
-        int threadIdx = omp_get_thread_num();
-        int teamSize = omp_get_num_threads();
+        #pragma omp parallel for
+        for (int j = 0; j < work_pteam; j++){
+             int partsum_evals = 0;
+    	     int* pEvals_of_new_entities = cData.pMem_evals_of_new_entities + idx * dockpars.pop_size;
+             // #pragma omp parallel for reduction(+:partsum_evals)
+             for (int entity_counter = j; entity_counter < dockpars.pop_size; entity_counter +=work_pteam) 
+             {
+	         partsum_evals += pEvals_of_new_entities[entity_counter];
+	     }
+             sum_evals += partsum_evals;
 
-        int partsum_evals = 0;
-    	int* pEvals_of_new_entities = cData.pMem_evals_of_new_entities + teamIdx * dockpars.pop_size;
-        for (int entity_counter = threadIdx; entity_counter < dockpars.pop_size; entity_counter +=teamSize) 
-        {
-	    partsum_evals += pEvals_of_new_entities[entity_counter];
-	}
-        sum_evals += partsum_evals;
-
-	if(threadIdx == 0){
-           cData.pMem_gpu_evals_of_runs[teamIdx] += sum_evals;
-        }
+	    if(j == 0){
+                cData.pMem_gpu_evals_of_runs[idx] += sum_evals;
+            }
+        }// End for a team
    }// End for teams
 }
 

@@ -26,34 +26,32 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 void gpu_calc_initpop(	uint32_t pops_by_runs, 
-			uint32_t threadsPerBlock, 
+			uint32_t work_pteam, 
 			float* pMem_conformations_current, 
 			float* pMem_energies_current, 
 			GpuData& cData,
 			GpuDockparameters dockpars )
 {
 
-    #pragma omp target 
-    #pragma omp teams distribute parallel for 
+    #pragma omp target teams distribute 
     for (int idx = 0; idx < pops_by_runs; idx++)
     {  
         float3struct calc_coords[MAX_NUM_OF_ATOMS];
+	//#pragma omp allocate(calc_coords) allocator(omp_pteam_mem_alloc)  
+        
+	#pragma omp parallel for 
+        for(int j = 0; j < work_pteam; j++){ 
+            float  energy = 0.0f;
+            int run_id = idx / dockpars.pop_size;
+            float* pGenotype = pMem_conformations_current + idx * GENOTYPE_LENGTH_IN_GLOBMEM;
+	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, j, work_pteam, cData, dockpars );
 	
-	#pragma omp allocate(calc_coords) allocator(omp_pteam_mem_alloc)   
-        float  energy = 0.0f;
-        int teamIdx = omp_get_team_num();
-        int threadIdx = omp_get_thread_num();
-        int teamSize = omp_get_num_threads();
-        int run_id = teamIdx / dockpars.pop_size;
-        float* pGenotype = pMem_conformations_current + teamIdx * GENOTYPE_LENGTH_IN_GLOBMEM;
-	gpu_calc_energy( pGenotype, energy, run_id, calc_coords, threadIdx, teamSize, cData, dockpars );
-	
-        // Write out final energy
-        if (threadIdx == 0){
-                pMem_energies_current[teamIdx] = energy;
-                cData.pMem_evals_of_new_entities[teamIdx] = 1;
-	 }
-
+            // Write out final energy
+            if (j == 0){
+                pMem_energies_current[idx] = energy;
+                cData.pMem_evals_of_new_entities[idx] = 1;
+	    }
+        }// End for a team
     }// End for a set of teams
 
 }

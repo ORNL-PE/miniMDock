@@ -111,7 +111,7 @@ void gpu_calc_energy(
     int& run_id,
     float3struct* calc_coords,  
     int idx,
-    uint32_t teamSize,
+    uint32_t work_pteam,
     GpuData& cData,
     GpuDockparameters dockpars
 ) 
@@ -133,7 +133,7 @@ void gpu_calc_energy(
 	//#pragma omp parallel for
 	for (uint atom_id = idx;
 		  atom_id < dockpars.num_of_atoms;
-		  atom_id+= teamSize) {
+		  atom_id+= work_pteam) {
 		// Initialize coordinates
         calc_coords[atom_id].x = cData.pKerconst_conform->ref_coords_const[3*atom_id];
         calc_coords[atom_id].y = cData.pKerconst_conform->ref_coords_const[3*atom_id+1];
@@ -172,7 +172,7 @@ void gpu_calc_energy(
 //	#pragma omp parallel for
 	for (uint rotation_counter  = idx;
 	          rotation_counter  < dockpars.rotbondlist_length;
-	          rotation_counter += teamSize)
+	          rotation_counter += work_pteam)
 	{
 		int rotation_list_element = cData.pKerconst_rotlist->rotlist_const[rotation_counter];
 
@@ -247,7 +247,7 @@ void gpu_calc_energy(
 //	#pragma omp parallel for
 	for (uint atom_id = idx;
 	          atom_id < dockpars.num_of_atoms;
-	          atom_id+= teamSize)
+	          atom_id+= work_pteam)
 	{
 		uint atom_typeid = cData.pKerconst_interintra->atom_types_map_const[atom_id];
 		float x = calc_coords[atom_id].x;
@@ -329,7 +329,7 @@ void gpu_calc_energy(
 //	#pragma omp parallel for
 	for (uint contributor_counter = idx;
 	          contributor_counter < dockpars.num_of_intraE_contributors;
-	          contributor_counter += teamSize)
+	          contributor_counter += work_pteam)
 
 	{
 
