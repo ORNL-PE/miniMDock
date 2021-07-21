@@ -40,7 +40,13 @@ int prepare_const_fields_for_gpu(Liganddata* 	   		myligand_reference,
 				 kernelconstant_intra*		KerConst_intra,
 				 kernelconstant_rotlist*	KerConst_rotlist,
 				 kernelconstant_conform*	KerConst_conform,
+#ifdef USE_OMPT
+				int*		rotbonds_const,
+                                int*    	rotbonds_atoms_const,
+                                int*        	num_rotating_atoms_per_rotbond_const)				
+#else
 				 kernelconstant_grads*          KerConst_grads)
+#endif
 
 //The function fills the constant memory field of the GPU (ADM FPGA)
 //defined above (erased from here) and used during GPU docking,
@@ -389,9 +395,16 @@ int prepare_const_fields_for_gpu(Liganddata* 	   		myligand_reference,
 	// Added for calculating torsion-related gradients.
 	// Passing list of rotbond-atoms ids to the GPU.
 	// Contains the same information as processligand.h/Liganddata->rotbonds
+
+#ifdef USE_OMPT
+	for (m=0;m<2*MAX_NUM_OF_ROTBONDS;m++)                   { rotbonds_const[m]                       = rotbonds[m]; }
+        for (m=0;m<MAX_NUM_OF_ATOMS*MAX_NUM_OF_ROTBONDS;m++)    { rotbonds_atoms_const[m]                 = rotbonds_atoms[m]; }
+        for (m=0;m<MAX_NUM_OF_ROTBONDS;m++)                     { num_rotating_atoms_per_rotbond_const[m] = num_rotating_atoms_per_rotbond[m]; }
+#else
 	for (m=0;m<2*MAX_NUM_OF_ROTBONDS;m++) 			{ KerConst_grads->rotbonds[m] 			    = rotbonds[m]; }
 	for (m=0;m<MAX_NUM_OF_ATOMS*MAX_NUM_OF_ROTBONDS;m++) 	{ KerConst_grads->rotbonds_atoms[m]                 = rotbonds_atoms[m]; }
 	for (m=0;m<MAX_NUM_OF_ROTBONDS;m++) 			{ KerConst_grads->num_rotating_atoms_per_rotbond[m] = num_rotating_atoms_per_rotbond[m]; }
+#endif
 	return 0;
 }
 

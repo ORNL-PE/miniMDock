@@ -62,15 +62,13 @@ typedef struct {
 } Gradientparameters;
 #endif
 
-void copy_map_to_gpu(	GpuTempData& tData,
+void copy_map_to_gpu(	GpuTempData& ,
 			std::vector<Map>& all_maps,
 			int t,
 			int size_of_one_map);
 
-void setup_gpu_for_docking(GpuData& cData, 
-                           GpuTempData& tData);
-void finish_gpu_from_docking(GpuData& cData, 
-                             GpuTempData& tData);
+void setup_gpu_for_docking(GpuData& cData );
+void finish_gpu_from_docking(GpuData& cData );
 int docking_with_gpu(const Gridinfo* 		mygrid,
          	     /*const*/ float* 		cpu_floatgrids,
 		           Dockpars*		mypars,
@@ -79,8 +77,8 @@ int docking_with_gpu(const Gridinfo* 		mygrid,
 		     const int* 		argc,
 		     char**			argv,
 			SimulationState&	sim_state,
-			GpuData& cData,
-			GpuTempData& tData);
+			GpuData& cData
+			);
 
 double check_progress(int* evals_of_runs,
 		      int generation_cnt,

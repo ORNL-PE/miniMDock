@@ -191,7 +191,13 @@ int prepare_const_fields_for_gpu(Liganddata* 	   		myligand_reference,
 				 kernelconstant_intra*		KerConst_intra,
 				 kernelconstant_rotlist*	KerConst_rotlist,
 				 kernelconstant_conform*	KerConst_conform,
-				 kernelconstant_grads*          KerConst_grads);
+#ifdef USE_OMPT
+                                int*            rotbonds_const,
+                                int*            rotbonds_atoms_const,
+                                int*            num_rotating_atoms_per_rotbond_const);
+#else
+                                 kernelconstant_grads*          KerConst_grads);
+#endif
 
 #endif
 

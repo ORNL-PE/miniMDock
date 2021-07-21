@@ -126,8 +126,12 @@ int main(int argc, char* argv[])
 			break;
 		}
 	}
+#ifdef USE_OMPT
         cData.devnum = 0;
-	setup_gpu_for_docking(cData,tData);
+	setup_gpu_for_docking(cData);
+#else
+	setup_gpu_for_docking(cData, tData);
+#endif
 
 #endif
 
@@ -167,7 +171,12 @@ int main(int argc, char* argv[])
 #ifdef USE_KOKKOS
 				error_in_docking = docking_with_gpu(&(mygrid), floatgrids, &(mypars), &(myligand_init), &(myxrayligand), &argc, argv);
 #else
+#ifdef USE_OMPT
+				error_in_docking = docking_with_gpu(&(mygrid), floatgrids.data(), &(mypars), &(myligand_init), &(myxrayligand), &argc, argv, sim_state, cData);
+#else
 				error_in_docking = docking_with_gpu(&(mygrid), floatgrids.data(), &(mypars), &(myligand_init), &(myxrayligand), &argc, argv, sim_state, cData, tData);
+#endif
+
 #endif
 				// End exec timer, start idling timer
 				sim_state.exec_time = seconds_since(exec_timer);
@@ -190,7 +199,11 @@ int main(int argc, char* argv[])
 	                start_timer(resulting_timer);
 	                process_result(&(mygrid), floatgrids.data(), &(mypars), &(myligand_init), &(myxrayligand), &argc,argv, sim_state);
 	                resulting_time=seconds_since(resulting_timer);
-	//	finish_gpu_from_docking(cData,tData);
+#ifdef USE_OMPT
+		//finish_gpu_from_docking(cData);
+#else
+		finish_gpu_from_docking(cData, tData);
+#endif
 
 #endif
 
