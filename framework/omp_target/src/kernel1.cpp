@@ -33,25 +33,23 @@ void gpu_calc_initpop(	uint32_t pops_by_runs,
 			GpuDockparameters dockpars )
 {
 
-    #pragma omp target teams distribute 
+    #pragma omp target teams distribute
+  //  num_teams(pops_by_runs) thread_limit(work_pteam) 
     for (int idx = 0; idx < pops_by_runs; idx++)
     {  
         float3struct calc_coords[MAX_NUM_OF_ATOMS];
 	//#pragma omp allocate(calc_coords) allocator(omp_pteam_mem_alloc)  
         
-	#pragma omp parallel for 
+        float energy = 0.0f;
+	#pragma omp parallel for reduction(+:energy)
         for(int j = 0; j < work_pteam; j++){ 
-            float  energy = 0.0f;
             int run_id = idx / dockpars.pop_size;
             float* pGenotype = pMem_conformations_current + idx * GENOTYPE_LENGTH_IN_GLOBMEM;
-	    gpu_calc_energy( pGenotype, energy, run_id, calc_coords, j, work_pteam, cData, dockpars );
-	
-            // Write out final energy
-            if (j == 0){
-                pMem_energies_current[idx] = energy;
-                cData.pMem_evals_of_new_entities[idx] = 1;
-	    }
+	    energy += gpu_calc_energy( pGenotype, run_id, calc_coords, j, work_pteam, cData, dockpars );
         }// End for a team
+        // Write out final energy
+        pMem_energies_current[idx] = energy;
+        cData.pMem_evals_of_new_entities[idx] = 1;
     }// End for a set of teams
 
 }

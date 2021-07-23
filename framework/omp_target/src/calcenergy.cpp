@@ -105,9 +105,9 @@ inline float4struct quaternion_rotate(float4struct v, float4struct rot)
 
 // All related pragmas are in defines.h (accesible by host and device code)
 #pragma omp declare target
-void gpu_calc_energy(	    
+float gpu_calc_energy(	    
     float* pGenotype,
-    float& energy,
+    //float& energy,
     int& run_id,
     float3struct* calc_coords,  
     int idx,
@@ -123,7 +123,7 @@ void gpu_calc_energy(
 {
     //int idx = omp_get_thread_num();
 
-	energy = 0.0f;
+    float partial_energy = 0.0f;
 #if defined (DEBUG_ENERGY_KERNEL)    
     float interE = 0.0f;
     float intraE = 0.0f;
@@ -257,7 +257,7 @@ void gpu_calc_energy(
 		if ((x < 0) || (y < 0) || (z < 0) || (x >= dockpars.gridsize_x-1)
 				                  || (y >= dockpars.gridsize_y-1)
 						  || (z >= dockpars.gridsize_z-1)){
-			energy += 16777216.0f; //100000.0f;
+			partial_energy += 16777216.0f; //100000.0f;
 			continue; // get on with loop as our work here is done (we crashed into the walls)
 		}
 		// Getting coordinates
@@ -287,7 +287,7 @@ void gpu_calc_energy(
 		float* grid_value_000 = cData.pMem_fgrids + ((x_low  + y_low*g1  + z_low*g2)<<2);
 		ulong mul_tmp = atom_typeid*g3<<2;
 		// Calculating affinity energy
-		energy += TRILININTERPOL((grid_value_000+mul_tmp), weights);
+		partial_energy += TRILININTERPOL((grid_value_000+mul_tmp), weights);
 
 		#if defined (DEBUG_ENERGY_KERNEL)
 		interE += TRILININTERPOL((grid_value_000+mul_tmp), weights);
@@ -298,7 +298,7 @@ void gpu_calc_energy(
 
 		mul_tmp = atom_typeid*g3<<2;
 		// Calculating electrostatic energy
-		energy += q * TRILININTERPOL((grid_value_000+mul_tmp), weights);
+		partial_energy += q * TRILININTERPOL((grid_value_000+mul_tmp), weights);
 
 		#if defined (DEBUG_ENERGY_KERNEL)
 		interE += q * TRILININTERPOL((grid_value_000+mul_tmp), weights);
@@ -309,7 +309,7 @@ void gpu_calc_energy(
 
 		mul_tmp = atom_typeid*g3<<2;
 		// Calculating desolvation energy
-		energy += fabs(q) * TRILININTERPOL((grid_value_000+mul_tmp), weights);
+		partial_energy += fabs(q) * TRILININTERPOL((grid_value_000+mul_tmp), weights);
 
 		#if defined (DEBUG_ENERGY_KERNEL)
 		interE += fabs(q) * TRILININTERPOL((grid_value_000+mul_tmp), weights);
@@ -384,7 +384,7 @@ void gpu_calc_energy(
             float s6 = s2 * s4;
             float s12 = s6 * s6;
             float s10 = s6 * (hbond ? s4 : 1.0f);
-			energy +=   (cData.pKerconst_intra->VWpars_AC_const[idx] / s12) -
+			partial_energy +=   (cData.pKerconst_intra->VWpars_AC_const[idx] / s12) -
                         (cData.pKerconst_intra->VWpars_BD_const[idx] / s10);
 
 			#if defined (DEBUG_ENERGY_KERNEL)
@@ -413,7 +413,7 @@ void gpu_calc_energy(
 			dist2=dist_shift*dist_shift;
 			float diel = (1.105f / dist2)+0.0104f;
 			float es_energy = dockpars.coeff_elec * q1 * q2 / atomic_distance;
-			energy += diel * es_energy + desolv_energy;
+			partial_energy += diel * es_energy + desolv_energy;
 
 			#if defined (DEBUG_ENERGY_KERNEL)
 			intraE += (dockpars.coeff_elec * q1 * q2) /
@@ -436,7 +436,7 @@ void gpu_calc_energy(
 		if (((atom1_type_vdw_hb == ATYPE_CG_IDX) && (atom2_type_vdw_hb == ATYPE_G0_IDX)) || 
 		    ((atom1_type_vdw_hb == ATYPE_G0_IDX) && (atom2_type_vdw_hb == ATYPE_CG_IDX))) 
         {
-			energy += G * atomic_distance;
+			partial_energy += G * atomic_distance;
 		}
 		// ------------------------------------------------
 
@@ -444,6 +444,8 @@ void gpu_calc_energy(
 
 
 	// reduction to calculate energy
+	//energy += partial_energy;
+	return partial_energy;
 }
 
 #pragma omp end declare target

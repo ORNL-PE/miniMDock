@@ -29,26 +29,25 @@ void gpu_sum_evals(uint32_t nruns,
                    GpuDockparameters dockpars)
 {
     #pragma omp target teams distribute
+//    num_teams(nruns) thread_limit(work_pteam)
     for (int idx = 0; idx < nruns; idx++ ) {
     
         int sum_evals = 0;
     //    #pragma omp allocate(sum_evals) allocator(omp_pteam_mem_alloc)
 
-        #pragma omp parallel for
+    	int* pEvals_of_new_entities = cData.pMem_evals_of_new_entities + idx * dockpars.pop_size;
+        #pragma omp parallel for reduction(+:sum_evals)
         for (int j = 0; j < work_pteam; j++){
              int partsum_evals = 0;
-    	     int* pEvals_of_new_entities = cData.pMem_evals_of_new_entities + idx * dockpars.pop_size;
-             // #pragma omp parallel for reduction(+:partsum_evals)
              for (int entity_counter = j; entity_counter < dockpars.pop_size; entity_counter +=work_pteam) 
              {
-	         partsum_evals += pEvals_of_new_entities[entity_counter];
+	         sum_evals += pEvals_of_new_entities[entity_counter];
 	     }
              sum_evals += partsum_evals;
 
-	    if(j == 0){
-                cData.pMem_gpu_evals_of_runs[idx] += sum_evals;
-            }
         }// End for a team
+        cData.pMem_gpu_evals_of_runs[idx] += sum_evals;
+        //printf("k2_%d(%d, %d)\n", idx, cData.pMem_gpu_evals_of_runs[idx], sum_evals );
    }// End for teams
 }
 

@@ -369,7 +369,21 @@ filled with clock() */
                 return 1;
         }
 
-    // need to be checked
+    // Seems values fly to device without explicit updates
+    #pragma omp target update to(cData.pKerconst_interintra)
+    #pragma omp target update to(cData.pKerconst_intra)
+    #pragma omp target update to(cData.pKerconst_rotlist)
+    #pragma omp target update to(cData.pKerconst_conform)
+    #pragma omp target update to(cData.pKerconst_intracontrib)
+
+    size_t sz_angle_const = 1000;
+    size_t sz_rotbonds_const = 2*MAX_NUM_OF_ROTBONDS;
+    size_t sz_rotbonds_atoms_const = MAX_NUM_OF_ATOMS*MAX_NUM_OF_ROTBONDS;
+
+    #pragma omp target update to(cData.pMem_rotbonds_const[:sz_rotbonds_const])
+    #pragma omp target update to(cData.pMem_rotbonds_atoms_const[:sz_rotbonds_atoms_const])
+    #pragma omp target update to(cData.pMem_num_rotating_atoms_per_rotbond_const[:MAX_NUM_OF_ROTBONDS])
+
 /*
     cData.pMem_rotbonds_const = KerConst_grads.rotbonds;
     cData.pMem_rotbonds_atoms_const = KerConst_grads.rotbonds_atoms;
@@ -571,13 +585,11 @@ filled with clock() */
 	#endif
  
    gpu_sum_evals(kernel2_gxsize, kernel2_lxsize, cData, dockpars);
-/*
-       int tot =0;
-        for(int i = 0; i <size_evals_of_runs; i++){
-        tot += cData.pMem_gpu_evals_of_runs[i];
-        printf("evals[%d] = %d \t %d \n", i, sim_state.cpu_evals_of_runs[i], cData.pMem_gpu_evals_of_runs[i]);
-        }
-*/
+
+        #pragma omp target update from(cData.pMem_gpu_evals_of_runs[:size_evals_of_runs])
+        sim_state.cpu_evals_of_runs.assign(cData.pMem_gpu_evals_of_runs, cData.pMem_gpu_evals_of_runs+size_evals_of_runs);
+ 
+
 	#ifdef DOCK_DEBUG
 		printf("%15s" ," ... Finished\n");fflush(stdout);
 	#endif
@@ -637,9 +649,9 @@ filled with clock() */
 		if (mypars->autostop) {
                         if (generation_cnt % mypars->as_frequency == 0) {
 				#pragma omp target update from(pMem_energies_current[:size_energies])
-                                for(int i =0; i< size_energies; i++) 
-					printf("energy[%d] = %f \n", i, pMem_energies_current[i]);
 				sim_state.cpu_energies.assign(pMem_energies_current, pMem_energies_current+size_energies);
+                        //        for(int i =0; i< size_energies; i++) 
+			//		printf("energy[%d] = %f \n", i, pMem_energies_current[i]);
                                 if (autostop.check_if_satisfactory(generation_cnt, sim_state.cpu_energies.data(), total_evals))
                                        break; // Exit loop
                         }
@@ -699,21 +711,9 @@ filled with clock() */
 		#endif
 		// End of Kernel2
 		// ===============================================================================
-		// -------- Replacing with memory maps! ------------
-#if defined (MAPPED_COPY)
-		//map_cpu_evals_of_runs = (int*) memMap(command_queue, mem_gpu_evals_of_runs, CL_MAP_READ, size_evals_of_runs);
-#else
+
            #pragma omp target update from(cData.pMem_gpu_evals_of_runs[:size_evals_of_runs])
 	   sim_state.cpu_evals_of_runs.assign(cData.pMem_gpu_evals_of_runs, cData.pMem_gpu_evals_of_runs+size_evals_of_runs);
-#endif
-
-	int tot =0;
-   	for(int i = 0; i <size_evals_of_runs; i++){
-   	tot += cData.pMem_gpu_evals_of_runs[i];
-    	printf("evals[%d] = %d \t %d \n", i, sim_state.cpu_evals_of_runs[i], cData.pMem_gpu_evals_of_runs[i]);
-	}
-	printf("tot : %d \n", tot);
-
 
 		// -------- Replacing with memory maps! ------------
 		generation_cnt++;
@@ -731,7 +731,7 @@ filled with clock() */
 		// But never two args point to the same region of dev memory
 		// NO ALIASING -> use restrict in Kernel
         
-        // Flip conformation and energy pointers
+        // Flip conformation and energy pointers - on device too
         float* pTemp;
         pTemp = pMem_conformations_current;
         pMem_conformations_current = pMem_conformations_next;

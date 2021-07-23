@@ -6,9 +6,10 @@
 
 
 #pragma omp declare target
-void gpu_calc_energy(
+float gpu_calc_energy(
+//void gpu_calc_energy(
     float* pGenotype,
-    float& energy,
+ //   float& energy,
     int& run_id,
     float3struct* calc_coords,
     int idx,

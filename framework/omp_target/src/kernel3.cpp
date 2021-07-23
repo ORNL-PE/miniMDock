@@ -46,7 +46,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 //subjected to local search, the entity with ID num_of_lsentities is selected instead of the first one (with ID 0).
 {
 
-    #pragma omp target teams distribute 
+    #pragma omp target teams distribute
 //     num_teams(pops_by_runs) thread_limit(work_pteam)
     for (int idx = 0; idx < pops_by_runs; idx++)	
     {  //for teams
@@ -171,9 +171,10 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 //--- thread barrier
 
 		// ==================================================================
+                candidate_energy +=
 		gpu_calc_energy(
                 genotype_candidate,
-                candidate_energy,
+                //candidate_energy,
                 run_id,
                 calc_coords,
 		j,
@@ -225,11 +226,12 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 
 			// Evaluating candidate
 //--- thread barrier
-
+//#pragma omp barrier
 			// =================================================================
+                	candidate_energy +=
 			gpu_calc_energy(
                 	genotype_candidate,
-                	candidate_energy,
+                	//candidate_energy,
                 	run_id,
                 	calc_coords,
 	        	j,
