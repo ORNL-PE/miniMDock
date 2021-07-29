@@ -50,8 +50,10 @@ void gpu_gen_and_eval_newpops(
 	 int covr_point[2];
 	 float randnums[10];
          float bestEnergy[NUM_OF_THREADS_PER_BLOCK];
-        // int bestID[NUM_OF_THREADS_PER_BLOCK];
+         int bestID[NUM_OF_THREADS_PER_BLOCK];
 	 float3struct calc_coords[MAX_NUM_OF_ATOMS];
+         int partial_energy[NUM_OF_THREADS_PER_BLOCK];
+	 float energy;
 /*
 	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)	 
 	 #pragma omp allocate(parent_candidates) allocator(omp_pteam_mem_alloc)	 
@@ -68,31 +70,31 @@ void gpu_gen_and_eval_newpops(
  
 	    int run_id;    
 	    int temp_covr_point;
-	    float energy;
-            int bestID; 
+//	    float energy;
+        //    int bestID; 
 
 	    // In this case this compute-unit is responsible for elitist selection
 	    if ((idx % dockpars.pop_size) == 0) {
             // Find and copy best member of population to position 0
             if (j <dockpars.pop_size)
             {
-               bestID = idx + j;
-               //bestID[j] = idx + j;
-               //bestEnergy[j] = pMem_energies_current[idx + j];
-               energy = pMem_energies_current[idx + j];
+          //     bestID = idx + j;
+               bestID[j] = idx + j;
+               bestEnergy[j] = pMem_energies_current[idx + j];
+               //energy = pMem_energies_current[idx + j];
             }
         
             // Scan through population (we already picked up a work_pteam's worth above so skip)
             for (int i = idx + work_pteam + j; i < idx + dockpars.pop_size; i += work_pteam)
             {
                float e = pMem_energies_current[i];
-               if (e < energy)
-               //if (e < bestEnergy[j])
+               //if (e < energy)
+               if (e < bestEnergy[j])
                {
-                  bestID = i;
-                  //bestID[j] = i;
-                  //bestEnergy[j] = e;
-                  energy = e;
+                  //bestID = i;
+                  bestID[j] = i;
+                  bestEnergy[j] = e;
+                  //energy = e;
                }
            }
         
@@ -100,13 +102,13 @@ void gpu_gen_and_eval_newpops(
  // /*
             if (j == 0)
             {
-	/*	for(int entity_counter = 1; entity_counter < work_pteam; entity_counter++)
+		for(int entity_counter = 1; entity_counter < work_pteam; entity_counter++)
                     if ((bestEnergy[entity_counter] < bestEnergy[0]) && (entity_counter < dockpars.pop_size)){
 			bestEnergy[0] = bestEnergy[entity_counter];
 			bestID[0] = bestID[entity_counter];
 			}
-         */
-		pMem_energies_next[idx] = energy; //bestEnergy[0];
+         
+		pMem_energies_next[idx] = bestEnergy[0];
                 cData.pMem_evals_of_new_entities[idx] = 0;
             }
 //  */      
@@ -114,8 +116,8 @@ void gpu_gen_and_eval_newpops(
         
             // Copy best genome to next generation
             int dOffset = idx * GENOTYPE_LENGTH_IN_GLOBMEM;
-            int sOffset = bestID * GENOTYPE_LENGTH_IN_GLOBMEM;
-            //int sOffset = bestID[0] * GENOTYPE_LENGTH_IN_GLOBMEM;
+            //int sOffset = bestID * GENOTYPE_LENGTH_IN_GLOBMEM;
+            int sOffset = bestID[0] * GENOTYPE_LENGTH_IN_GLOBMEM;
             for (int i = j ; i < dockpars.num_of_genes; i += work_pteam)
             {
                 pMem_conformations_next[dOffset + i] = pMem_conformations_current[sOffset + i];
@@ -258,7 +260,7 @@ void gpu_gen_and_eval_newpops(
 
 		// Calculating energy of new offspring
 //--- thread barrier
-		energy +=
+		partial_energy[j] =
         	gpu_calc_energy(
             		offspring_genotype,
 		//	energy,
@@ -272,9 +274,12 @@ void gpu_gen_and_eval_newpops(
         
         
         if (j == 0) {
-            pMem_energies_next[idx] = energy;
+           float energy_idx = 0.0f;
+           for(int i =0; i < work_pteam; i++)
+                            energy_idx += partial_energy[i];
+            pMem_energies_next[idx] = energy_idx;
             cData.pMem_evals_of_new_entities[idx] = 1;
-
+	    printf("energy_%d : %f \n", idx, energy);
 			#if defined (DEBUG_ENERGY_KERNEL4)
 			printf("%-18s [%-5s]---{%-5s}   [%-10.8f]---{%-10.8f}\n", "-ENERGY-KERNEL4-", "GRIDS", "INTRA", interE, intraE);
 			#endif

@@ -63,6 +63,8 @@ void gpu_perform_LS( uint32_t pops_by_runs,
          float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
          float offspring_energy;
          int entity_id;
+	 float candidate_energy;
+	 float partial_energy[NUM_OF_THREADS_PER_BLOCK];
 /*
 	 #pragma omp allocate(genotype_candidate) allocator(omp_pteam_mem_alloc)
 	 #pragma omp allocate(genotype_deviate) allocator(omp_pteam_mem_alloc)
@@ -80,7 +82,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
          #pragma omp parallel for
          for(int j =0; j< work_pteam; j++ ){             
  
-	      float candidate_energy;
+//	      float candidate_energy;
               int run_id;
 
 	// Determining run ID and entity ID
@@ -171,7 +173,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 //--- thread barrier
 
 		// ==================================================================
-                candidate_energy +=
+                partial_energy[j] =
 		gpu_calc_energy(
                 genotype_candidate,
                 //candidate_energy,
@@ -183,8 +185,12 @@ void gpu_perform_LS( uint32_t pops_by_runs,
                 dockpars
 				);
 		// =================================================================
-
+               
 		if (j == 0) {
+			float energy_idx = 0.0f;
+                        for(int i =0; i < work_pteam; i++)
+                            energy_idx += partial_energy[i];
+                        candidate_energy = energy_idx;
 			evaluation_cnt++;
 		}
 //--- thread barrier
@@ -228,7 +234,7 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 //--- thread barrier
 //#pragma omp barrier
 			// =================================================================
-                	candidate_energy +=
+                	partial_energy[j] =
 			gpu_calc_energy(
                 	genotype_candidate,
                 	//candidate_energy,
@@ -242,6 +248,10 @@ void gpu_perform_LS( uint32_t pops_by_runs,
 			// =================================================================
 
 			if (j == 0) {
+				float energy_idx = 0.0f;
+				for(int i =0; i < work_pteam; i++)
+                                    energy_idx += partial_energy[i];
+                                candidate_energy = energy_idx;
 				evaluation_cnt++;
 
 				#if defined (DEBUG_ENERGY_KERNEL)
