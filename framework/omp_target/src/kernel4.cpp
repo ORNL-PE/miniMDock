@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "kernels.hpp"
-#include "calcenergy.hpp"
+#include "calcenergy_gpu.hpp"
 #include "auxiliary_genetic.hpp"
 
 //#define DEBUG_ENERGY_KERNEL4
@@ -279,7 +279,7 @@ void gpu_gen_and_eval_newpops(
                             energy_idx += partial_energy[i];
             pMem_energies_next[idx] = energy_idx;
             cData.pMem_evals_of_new_entities[idx] = 1;
-	    printf("energy_%d : %f \n", idx, energy);
+	    //printf("energy_%d : %f \n", idx, energy);
 			#if defined (DEBUG_ENERGY_KERNEL4)
 			printf("%-18s [%-5s]---{%-5s}   [%-10.8f]---{%-10.8f}\n", "-ENERGY-KERNEL4-", "GRIDS", "INTRA", interE, intraE);
 			#endif

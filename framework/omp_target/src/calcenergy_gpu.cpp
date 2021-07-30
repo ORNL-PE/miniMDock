@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "kernels.hpp"
-#include "calcenergy.hpp"
+#include "calcenergy_gpu.hpp"
 
 //#define DEBUG_ENERGY_KERNEL
 
