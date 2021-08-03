@@ -11,11 +11,23 @@ UNAME := $(shell uname)
 $(shell ./link_ompt.sh)
 
 #Using LLVM clang compiler
-CPP=clang++ -Ofast -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvida-cuda --cuda-path=$(GPU_PATH)
-#CPP=clang++ -Ofast -std=c++17 -fopenmp -lopmtarget -fopenmp-targets=nvptx64-nvida-cuda --cuda-path=$(GPU_PATH)
-
+ifeq ($(COMPILER), llvm)
+      CPP=clang++ -Ofast -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvida-cuda --cuda-path=$(GPU_PATH)
+##CPP=clang++ -Ofast -std=c++17 -fopenmp -lopmtarget -fopenmp-targets=nvptx64-nvida-cuda --cuda-path=$(GPU_PATH)
+      COMP=llvm
 #Using IBM XL Compiler
-#CPP=xlc -std=c++17 -qsmp=omp -qoffload 
+else ifeq ($(COMPILER), xl)
+      CPP=xlC -std=c++14 -qsmp=omp -qoffload -O3 -qstrict 
+      COMP=xl
+#Using NVIDIA nvc++ compiler
+else ifeq ($(COMPILER), nvhpc)
+      CPP=nvc++ -std=c++17 -mp=gpu
+      COMP=nvhpc
+#Using gcc 
+else ifeq ($(COMPILER), gcc)
+      CPP=g++ -fopenmp -foffload=-lm  -O2 -std=c++17
+      COMP=gcc
+endif
 
 # ------------------------------------------------------
 # Project directories
@@ -44,6 +56,7 @@ ifeq ($(CARD), AMD)
 else
         TARGET:=$(TARGET)_nv
 endif
+TARGET:=$(TARGET)_$(COMP)
 
 ifeq ($(OVERLAP), ON)
 	ifeq ($(DEVICE), GPU)
