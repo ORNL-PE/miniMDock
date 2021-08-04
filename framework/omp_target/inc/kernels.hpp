@@ -22,8 +22,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 
-#include <cstdint>
-#include <cassert>
+#include <stdint.h>
+#include <assert.h>
 #include "defines.h"
 #include "calcenergy.h"
 #include "GpuData.h"
@@ -57,7 +57,7 @@ void gpu_perform_LS(
      float* pMem_conformations_next, 
      float* pMem_energies_next,
      GpuData& cData,
-     GpuDockparameters dockpars 
+     GpuDockparameters& dockpars 
      );
 
 void gpu_gen_and_eval_newpops(

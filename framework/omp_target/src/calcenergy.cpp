@@ -113,7 +113,7 @@ float gpu_calc_energy(
     int idx,
     uint32_t work_pteam,
     GpuData& cData,
-    GpuDockparameters dockpars
+    GpuDockparameters &dockpars
 ) 
 
 //The GPU device function calculates the energy of the entity described by genotype, dockpars and the liganddata

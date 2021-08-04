@@ -3,6 +3,7 @@
 #define CALCENERGY_H
 
 #include "typedefine.h"
+#include "GpuData.h"
 
 
 #pragma omp declare target
@@ -15,7 +16,7 @@ float gpu_calc_energy(
     int idx,
     uint32_t blockDim,
     GpuData& cData,
-    GpuDockparameters dockpars
+    GpuDockparameters& dockpars
 );
 #pragma omp end declare target
 

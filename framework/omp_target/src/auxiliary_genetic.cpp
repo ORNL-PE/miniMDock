@@ -45,14 +45,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
   	// Current state of the threads own PRNG
   	// state = prng_states[get_group_id(0)*NUM_OF_THREADS_PER_BLOCK + get_local_id(0)];
-	state = prng_states[blockIdx * NUM_OF_THREADS_PER_BLOCK + threadIdx];
+	  //#pragma omp atomic capture 
+	  {
+		  state = prng_states[blockIdx * NUM_OF_THREADS_PER_BLOCK + threadIdx];
+		  // Calculating next state
+		  // state = (RAND_A*state+RAND_C);
 
-	// Calculating next state
-  	state = (RAND_A*state+RAND_C);
-
-  	// Saving next state to memory
-  	// prng_states[get_group_id(0)*NUM_OF_THREADS_PER_BLOCK + get_local_id(0)] = state;
-	prng_states[blockIdx * NUM_OF_THREADS_PER_BLOCK + threadIdx] = state;
+	  		// Saving next state to memory
+  			// prng_states[get_group_id(0)*NUM_OF_THREADS_PER_BLOCK + get_local_id(0)] = state;
+			prng_states[blockIdx * NUM_OF_THREADS_PER_BLOCK + threadIdx] = (RAND_A*state+RAND_C);
+	  }
 
   return state;
 }
