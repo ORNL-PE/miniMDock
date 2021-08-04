@@ -243,7 +243,6 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 
 				// Evaluating candidate
 				//--- thread barrier
-				//#pragma omp barrier
 				// =================================================================
 				#pragma omp parallel for reduction(+ : energy_idx)
 				for (int j = 0; j < work_pteam; j++) {
@@ -275,24 +274,22 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 					offspring_energy)  // If candidate is better, success
 				{
 					#pragma omp parallel for 
-					for (int j = 0; j < work_pteam; j++) {
-						for (uint32_t gene_counter = j;
-							gene_counter < dockpars.num_of_genes;
-							gene_counter += work_pteam) {
-							// Updating offspring_genotype
-							offspring_genotype[gene_counter] =
-								genotype_candidate[gene_counter];
+					for (uint32_t gene_counter = 0;
+						gene_counter < dockpars.num_of_genes;
+						gene_counter += 1) {
+						// Updating offspring_genotype
+						offspring_genotype[gene_counter] =
+							genotype_candidate[gene_counter];
 
-							// Updating genotype_bias
-							genotype_bias[gene_counter] =
-								0.6f * genotype_bias[gene_counter] -
-								0.4f * genotype_deviate[gene_counter];
-						}
+						// Updating genotype_bias
+						genotype_bias[gene_counter] =
+							0.6f * genotype_bias[gene_counter] -
+							0.4f * genotype_deviate[gene_counter];
+					}
 
 						// Work-item 0 will overwrite the shared variables
 						// used in the previous if condition
 						//--- thread barrier
-					}
 
 					if (0 == 0) {
 						offspring_energy = candidate_energy;
@@ -302,12 +299,11 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				}
 				else { // Failure in both directions
 					#pragma omp parallel for
-					for (int j = 0; j < work_pteam; j++) {
-						for (uint32_t gene_counter = j;
-							gene_counter < dockpars.num_of_genes;
-							gene_counter += work_pteam)
-							// Updating genotype_bias
-							genotype_bias[gene_counter] = 0.5f * genotype_bias[gene_counter];
+					for (uint32_t gene_counter = 0;
+						gene_counter < dockpars.num_of_genes;
+						gene_counter += 1){
+						// Updating genotype_bias
+						genotype_bias[gene_counter] = 0.5f * genotype_bias[gene_counter];
 					}
 
 					if (0 == 0) {
@@ -345,15 +341,13 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 //		offset =
 //			(run_id * dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
 		#pragma omp parallel for 
-		for (int j = 0; j < work_pteam; j++) {
-			for (uint32_t gene_counter = j; gene_counter < dockpars.num_of_genes;
-				gene_counter += work_pteam) {
-				if (gene_counter >= 3) {
-					map_angle(offspring_genotype[gene_counter]);
-				}
-				pMem_conformations_next[offset + gene_counter] =
-					offspring_genotype[gene_counter];
+		for (uint32_t gene_counter = 0; gene_counter < dockpars.num_of_genes;
+			gene_counter += 1) {
+			if (gene_counter >= 3) {
+				map_angle(offspring_genotype[gene_counter]);
 			}
+			pMem_conformations_next[offset + gene_counter] =
+				offspring_genotype[gene_counter];
 		}
 	}  // End for a set of teams
 }
