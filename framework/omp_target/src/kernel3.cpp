@@ -208,16 +208,14 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 
 			if (candidate_energy < offspring_energy) {  // If candidate is better, success
 				#pragma omp parallel for 
-				for (int j = 0; j < work_pteam; j++) {
-					for (uint32_t gene_counter = j; gene_counter < dockpars.num_of_genes;
-						gene_counter += work_pteam) {
-						// Updating offspring_genotype
-						offspring_genotype[gene_counter] = genotype_candidate[gene_counter];
+				for (uint32_t gene_counter = 0; gene_counter < dockpars.num_of_genes;
+					gene_counter += 1) {
+					// Updating offspring_genotype
+					offspring_genotype[gene_counter] = genotype_candidate[gene_counter];
 
-						// Updating genotype_bias
-						genotype_bias[gene_counter] = 0.6f * genotype_bias[gene_counter] +
-							0.4f * genotype_deviate[gene_counter];
-					}
+					// Updating genotype_bias
+					genotype_bias[gene_counter] = 0.6f * genotype_bias[gene_counter] +
+						0.4f * genotype_deviate[gene_counter];
 
 					// Work-item 0 will overwrite the shared variables
 					// used in the previous if condition
@@ -235,19 +233,20 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			else {   // If candidate is worser, check the opposite direction
 				// Generating the other genotype candidate
 				float energy_idx = 0.0f;
+				#pragma omp parallel for 
+				for (uint32_t gene_counter = 0; gene_counter < dockpars.num_of_genes;
+					gene_counter += 1) {
+					genotype_candidate[gene_counter] =
+						offspring_genotype[gene_counter] -
+						genotype_deviate[gene_counter] - genotype_bias[gene_counter];
+				}
+
+				// Evaluating candidate
+				//--- thread barrier
+				//#pragma omp barrier
+				// =================================================================
 				#pragma omp parallel for reduction(+ : energy_idx)
 				for (int j = 0; j < work_pteam; j++) {
-					for (uint32_t gene_counter = j; gene_counter < dockpars.num_of_genes;
-						gene_counter += work_pteam) {
-						genotype_candidate[gene_counter] =
-							offspring_genotype[gene_counter] -
-							genotype_deviate[gene_counter] - genotype_bias[gene_counter];
-					}
-
-					// Evaluating candidate
-					//--- thread barrier
-					//#pragma omp barrier
-					// =================================================================
 					partial_energy[j] = gpu_calc_energy(genotype_candidate,
 						// candidate_energy,
 						run_id, calc_coords, j,
