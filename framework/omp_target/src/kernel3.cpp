@@ -140,7 +140,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				// New random deviate
 				for (uint32_t gene_counter = j; gene_counter < dockpars.num_of_genes;
 					gene_counter += work_pteam) {
-					#ifdef SWAT3
+				#ifdef SWAT3
 					genotype_deviate[gene_counter] =
 						rho * (2 * gpu_randf(cData.pMem_prng_states, idx, j) - 1) *
 						(gpu_randf(cData.pMem_prng_states, idx, j) < gene_scale);
@@ -160,7 +160,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 								dockpars.base_dang_mul_sqrt3 * gene_scale;
 						}
 					}
-					#else
+				#else
 					genotype_deviate[gene_counter] =
 						rho * (2 * gpu_randf(cData.pMem_prng_states, idx, j) - 1) *
 						(gpu_randf(cData.pMem_prng_states, idx, j) < 0.3f);
@@ -196,7 +196,8 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				energy_idx += partial_energy[j];
 			}
 
-			if (0 == 0) {
+			//if (j == 0) 
+			{
 				//				int j = 0;
 				//				float energy_idx = 0.0f;
 				//				for (int i = 0; i < work_pteam; i++)
@@ -222,7 +223,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 					//--- thread barrier
 
 				}
-				//if (0 == 0) {
+				//if (j == 0) {
 				{
 					int j = 0;
 					offspring_energy = candidate_energy;
@@ -254,7 +255,8 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 					energy_idx += partial_energy[j];
 				}
 
-				if (0 == 0) {
+				//if (j == 0) 
+				{
 					//					float energy_idx = 0.0f;
 					//					for (int i = 0; i < work_pteam; i++)
 					//						energy_idx += partial_energy[i];
@@ -314,7 +316,8 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			}
 
 			// Changing rho if needed
-			if (0 == 0) {
+			//if (j == 0) 
+			{
 				iteration_cnt++;
 
 				if (cons_succ >= dockpars.cons_limit) {
@@ -330,7 +333,8 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 		}
 
 		// Updating eval counter and energy
-		if (0 == 0) {
+		//if (j == 0) 
+		{
 			cData.pMem_evals_of_new_entities[run_id * dockpars.pop_size +
 				entity_id] += evaluation_cnt;
 			pMem_energies_next[run_id * dockpars.pop_size + entity_id] =
