@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
 		if (strcmp("-devnum", argv [i]) == 0)
 		{
 			int tempint;
-			sscanf(argv [i+1], "%lu", &tempint);
+			sscanf(argv [i+1], "%d", &tempint);
 			if ((tempint >= 1) && (tempint <= 65536))
 				cData.devnum = (unsigned long) tempint-1;
 			else
