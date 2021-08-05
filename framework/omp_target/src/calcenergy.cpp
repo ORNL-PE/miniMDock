@@ -108,9 +108,9 @@ inline float4struct quaternion_rotate(float4struct v, float4struct rot)
 float gpu_calc_energy(	    
     float* pGenotype,
     //float& energy,
-    int& run_id,
+    const int& run_id,
     float3struct* calc_coords,  
-    int idx,
+    const int idx,
     uint32_t work_pteam,
     GpuData& cData,
     GpuDockparameters &dockpars
@@ -147,21 +147,21 @@ float gpu_calc_energy(
 	genrot_movingvec.z = pGenotype[2];
 	genrot_movingvec.w = 0.0f;
 	// Convert orientation genes from sex. to radians
-	float phi         = pGenotype[3] * DEG_TO_RAD;
-	float theta       = pGenotype[4] * DEG_TO_RAD;
-	float genrotangle = pGenotype[5] * DEG_TO_RAD;
+	const float phi         = pGenotype[3] * DEG_TO_RAD;
+	const float theta       = pGenotype[4] * DEG_TO_RAD;
+	const float genrotangle = pGenotype[5] * DEG_TO_RAD;
 
 	float4struct genrot_unitvec;
-	float sin_angle = sin(theta);
-	float s2 = sin(genrotangle * 0.5f);
+	const float sin_angle = sin(theta);
+	const float s2 = sin(genrotangle * 0.5f);
 	genrot_unitvec.x = s2*sin_angle*cos(phi);
 	genrot_unitvec.y = s2*sin_angle*sin(phi);
 	genrot_unitvec.z = s2*cos(theta);
 	genrot_unitvec.w = cos(genrotangle*0.5f);
 
-	uint g1 = dockpars.gridsize_x;
-	uint g2 = dockpars.gridsize_x_times_y;
-	uint g3 = dockpars.gridsize_x_times_y_times_z;
+	const uint g1 = dockpars.gridsize_x;
+	const uint g2 = dockpars.gridsize_x_times_y;
+	const uint g3 = dockpars.gridsize_x_times_y_times_z;
         
     //__threadfence();
     //__syncthreads();
@@ -193,10 +193,10 @@ float gpu_calc_energy(
 
 			if ((rotation_list_element & RLIST_GENROT_MASK) == 0) // If rotating around rotatable bond
 			{
-				uint rotbond_id = (rotation_list_element & RLIST_RBONDID_MASK) >> RLIST_RBONDID_SHIFT;
+				const uint rotbond_id = (rotation_list_element & RLIST_RBONDID_MASK) >> RLIST_RBONDID_SHIFT;
 
-				float rotation_angle = pGenotype[6+rotbond_id]*DEG_TO_RAD*0.5f;
-				float s = sin(rotation_angle);
+				const float rotation_angle = pGenotype[6+rotbond_id]*DEG_TO_RAD*0.5f;
+				const float s = sin(rotation_angle);
                 		rotation_unitvec.x = s*cData.pKerconst_conform->rotbonds_unit_vectors_const[3*rotbond_id];
                 		rotation_unitvec.y = s*cData.pKerconst_conform->rotbonds_unit_vectors_const[3*rotbond_id+1];
                 		rotation_unitvec.z = s*cData.pKerconst_conform->rotbonds_unit_vectors_const[3*rotbond_id+2];
@@ -250,10 +250,10 @@ float gpu_calc_energy(
 	          atom_id+= work_pteam)
 	{
 		uint atom_typeid = cData.pKerconst_interintra->atom_types_map_const[atom_id];
-		float x = calc_coords[atom_id].x;
-		float y = calc_coords[atom_id].y;
-		float z = calc_coords[atom_id].z;
-		float q = cData.pKerconst_interintra->atom_charges_const[atom_id];
+		const float x = calc_coords[atom_id].x;
+		const float y = calc_coords[atom_id].y;
+		const float z = calc_coords[atom_id].z;
+		const float q = cData.pKerconst_interintra->atom_charges_const[atom_id];
 		if ((x < 0) || (y < 0) || (z < 0) || (x >= dockpars.gridsize_x-1)
 				                  || (y >= dockpars.gridsize_y-1)
 						  || (z >= dockpars.gridsize_z-1)){
@@ -261,16 +261,16 @@ float gpu_calc_energy(
 			continue; // get on with loop as our work here is done (we crashed into the walls)
 		}
 		// Getting coordinates
-		uint x_low  = (uint)floor(x); 
-		uint y_low  = (uint)floor(y); 
-		uint z_low  = (uint)floor(z);
+		const uint x_low  = (uint)floor(x); 
+		const uint y_low  = (uint)floor(y); 
+		const uint z_low  = (uint)floor(z);
 
-		float dx = x - x_low;
-		float omdx = 1.0 - dx;
-		float dy = y - y_low; 
-		float omdy = 1.0 - dy;
-		float dz = z - z_low;
-		float omdz = 1.0 - dz;
+		const float dx = x - x_low;
+		const float omdx = 1.0 - dx;
+		const float dy = y - y_low; 
+		const float omdy = 1.0 - dy;
+		const float dz = z - z_low;
+		const float omdz = 1.0 - dz;
 
 		// Calculating interpolation weights
 		float weights[8];
@@ -284,7 +284,7 @@ float gpu_calc_energy(
 		weights [idx_111] = dx*dy*dz;
 
 		// Grid value at 000
-		float* grid_value_000 = cData.pMem_fgrids + ((x_low  + y_low*g1  + z_low*g2)<<2);
+		const float* grid_value_000 = cData.pMem_fgrids + ((x_low  + y_low*g1  + z_low*g2)<<2);
 		ulong mul_tmp = atom_typeid*g3<<2;
 		// Calculating affinity energy
 		partial_energy += TRILININTERPOL((grid_value_000+mul_tmp), weights);
@@ -321,7 +321,7 @@ float gpu_calc_energy(
 	// are independent from each other, -> NO BARRIER NEEDED
 	// but require different operations,
 	// thus, they can be executed only sequentially on the GPU.
-	float delta_distance = 0.5f * dockpars.smooth; 
+	const float delta_distance = 0.5f * dockpars.smooth; 
 
 	// ================================================
 	// CALCULATING INTRAMOLECULAR ENERGY
@@ -334,25 +334,25 @@ float gpu_calc_energy(
 	{
 
 		// Getting atom IDs
-		uint atom1_id = cData.pKerconst_intracontrib->intraE_contributors_const[3*contributor_counter];
-		uint atom2_id = cData.pKerconst_intracontrib->intraE_contributors_const[3*contributor_counter+1];
-		bool hbond = (cData.pKerconst_intracontrib->intraE_contributors_const[3*contributor_counter+2] == 1);	// evaluates to 1 in case of H-bond, 0 otherwise
+		const uint atom1_id = cData.pKerconst_intracontrib->intraE_contributors_const[3*contributor_counter];
+		const uint atom2_id = cData.pKerconst_intracontrib->intraE_contributors_const[3*contributor_counter+1];
+		const bool hbond = (cData.pKerconst_intracontrib->intraE_contributors_const[3*contributor_counter+2] == 1);	// evaluates to 1 in case of H-bond, 0 otherwise
 
 		// Calculating vector components of vector going
 		// from first atom's to second atom's coordinates
-		float subx = calc_coords[atom1_id].x - calc_coords[atom2_id].x;
-		float suby = calc_coords[atom1_id].y - calc_coords[atom2_id].y;
-		float subz = calc_coords[atom1_id].z - calc_coords[atom2_id].z;
+		const float subx = calc_coords[atom1_id].x - calc_coords[atom2_id].x;
+		const float suby = calc_coords[atom1_id].y - calc_coords[atom2_id].y;
+		const float subz = calc_coords[atom1_id].z - calc_coords[atom2_id].z;
 
 		// Calculating atomic_distance
-		float atomic_distance = sqrt(subx*subx + suby*suby + subz*subz)*dockpars.grid_spacing;
+		const float atomic_distance = sqrt(subx*subx + suby*suby + subz*subz)*dockpars.grid_spacing;
 
 		// Getting type IDs
-		uint atom1_typeid = cData.pKerconst_interintra->atom_types_const[atom1_id];
-		uint atom2_typeid = cData.pKerconst_interintra->atom_types_const[atom2_id];
+		const uint atom1_typeid = cData.pKerconst_interintra->atom_types_const[atom1_id];
+		const uint atom2_typeid = cData.pKerconst_interintra->atom_types_const[atom2_id];
 
-		uint atom1_type_vdw_hb = cData.pKerconst_intra->atom1_types_reqm_const [atom1_typeid];
-		uint atom2_type_vdw_hb = cData.pKerconst_intra->atom2_types_reqm_const [atom2_typeid];
+		const uint atom1_type_vdw_hb = cData.pKerconst_intra->atom1_types_reqm_const [atom1_typeid];
+		const uint atom2_type_vdw_hb = cData.pKerconst_intra->atom2_types_reqm_const [atom2_typeid];
 
 
 		// Calculating energy contributions
@@ -364,7 +364,7 @@ float gpu_calc_energy(
 			//       (sum of the vdW radii of two like atoms (A)) in the case of vdW
 			// reqm_hbond: equilibrium internuclear separation
 			//  	 (sum of the vdW radii of two like atoms (A)) in the case of hbond 
-			float opt_distance = (cData.pKerconst_intra->reqm_const [atom1_type_vdw_hb+ATYPE_NUM*(uint32_t)hbond] + cData.pKerconst_intra->reqm_const [atom2_type_vdw_hb+ATYPE_NUM*(uint32_t)hbond]);
+			const float opt_distance = (cData.pKerconst_intra->reqm_const [atom1_type_vdw_hb+ATYPE_NUM*(uint32_t)hbond] + cData.pKerconst_intra->reqm_const [atom2_type_vdw_hb+ATYPE_NUM*(uint32_t)hbond]);
 
 			// Getting smoothed distance
 			// smoothed_distance = function(atomic_distance, opt_distance)
@@ -378,12 +378,12 @@ float gpu_calc_energy(
 			}
 
 			// Calculating van der Waals / hydrogen bond term
-			uint idx = atom1_typeid * dockpars.num_of_atypes + atom2_typeid;
-            float s2 = smoothed_distance * smoothed_distance;
-            float s4 = s2 * s2;
-            float s6 = s2 * s4;
-            float s12 = s6 * s6;
-            float s10 = s6 * (hbond ? s4 : 1.0f);
+			const uint idx = atom1_typeid * dockpars.num_of_atypes + atom2_typeid;
+            const float s2 = smoothed_distance * smoothed_distance;
+            const float s4 = s2 * s2;
+            const float s6 = s2 * s4;
+            const float s12 = s6 * s6;
+            const float s10 = s6 * (hbond ? s4 : 1.0f);
 			partial_energy +=   (cData.pKerconst_intra->VWpars_AC_const[idx] / s12) -
                         (cData.pKerconst_intra->VWpars_BD_const[idx] / s10);
 
@@ -397,11 +397,11 @@ float gpu_calc_energy(
 		// Cutoff2: internuclear-distance at 20.48A only for el and sol.
 		if (atomic_distance < 20.48f)
 		{
-			float q1 = cData.pKerconst_interintra->atom_charges_const[atom1_id];
-			float q2 = cData.pKerconst_interintra->atom_charges_const[atom2_id];
+			const float q1 = cData.pKerconst_interintra->atom_charges_const[atom1_id];
+			const float q2 = cData.pKerconst_interintra->atom_charges_const[atom2_id];
 			float dist2 = atomic_distance*atomic_distance;
 			// Calculating desolvation term
-			float desolv_energy =  ((cData.pKerconst_intra->dspars_S_const[atom1_typeid] +
+			const float desolv_energy =  ((cData.pKerconst_intra->dspars_S_const[atom1_typeid] +
 						 dockpars.qasp*fabs(q1)) * cData.pKerconst_intra->dspars_V_const[atom2_typeid] +
 						(cData.pKerconst_intra->dspars_S_const[atom2_typeid] +
 						 dockpars.qasp*fabs(q2)) * cData.pKerconst_intra->dspars_V_const[atom1_typeid]) *
@@ -409,10 +409,10 @@ float gpu_calc_energy(
                         (12.96f+dist2*(0.4137f+dist2*(0.00357f+0.000112f*dist2))) // *native_exp(-0.03858025f*atomic_distance*atomic_distance);
 							      );
 			// Calculating electrostatic term
-			float dist_shift=atomic_distance+1.261f;
+			const float dist_shift=atomic_distance+1.261f;
 			dist2=dist_shift*dist_shift;
-			float diel = (1.105f / dist2)+0.0104f;
-			float es_energy = dockpars.coeff_elec * q1 * q2 / atomic_distance;
+			const float diel = (1.105f / dist2)+0.0104f;
+			const float es_energy = dockpars.coeff_elec * q1 * q2 / atomic_distance;
 			partial_energy += diel * es_energy + desolv_energy;
 
 			#if defined (DEBUG_ENERGY_KERNEL)

@@ -11,9 +11,9 @@ float gpu_calc_energy(
 //void gpu_calc_energy(
     float* pGenotype,
  //   float& energy,
-    int& run_id,
+    const int& run_id,
     float3struct* calc_coords,
-    int idx,
+    const int idx,
     uint32_t blockDim,
     GpuData& cData,
     GpuDockparameters& dockpars
