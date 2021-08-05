@@ -1,0 +1,16 @@
+#!/bin/bash
+# Begin LSF Directives
+#BSUB -P stf010
+#BSUB -W 00:30
+#BSUB -nnodes 1
+#BSUB -alloc_flags gpumps
+#BSUB -J runminiMdock
+#BSUB -o runminiMdock.%J
+#BSUB -e runminiMdock.%J
+
+module use /sw/summit/modulefiles/ums/stf010/Core
+module load llvm/13.0.0-latest
+
+cd $MEMBERWORK/stf010/miniMDock
+date
+jsrun -n 1 -g 1 -c 21 ./bin/autodock_ompt_nv_llvm -lfile ./input/7cpa/7cpa_ligand.pdbqt -nrun 10 -ndock 1

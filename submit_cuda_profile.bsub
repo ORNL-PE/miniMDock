@@ -1,0 +1,27 @@
+#!/bin/bash
+# Begin LSF Directives
+#BSUB -P stf010
+#BSUB -W 00:30
+#BSUB -nnodes 1
+#BSUB -alloc_flags gpumps
+#BSUB -J miniMdockcuda
+#BSUB -o miniMdockcuda.%J
+#BSUB -e miniMdockcuda.%J
+
+module use /sw/summit/modulefiles/ums/stf010/Core
+module load llvm/13.0.0-latest cuda
+
+cd $MEMBERWORK/stf010/miniMDock
+date
+echo
+echo "============================================================================================"
+echo "======                   RUNNING USING 64 WI                                          ====="
+echo "============================================================================================"
+echo
+jsrun -n 1 -g 1 -c 21 nvprof --analysis-metrics -f -o minidock_cuda_64.prof ./bin/autodock_gpu_64wi -lfile ./input/7cpa/7cpa_ligand.pdbqt -nrun 10 -ndock 1
+echo
+echo "============================================================================================"
+echo "======                   RUNNING USING 32 WI                                          ====="
+echo "============================================================================================"
+jsrun -n 1 -g 1 -c 21 nvprof --analysis-metrics -f -o minidock_cuda_32.prof ./bin/autodock_gpu_32wi -lfile ./input/7cpa/7cpa_ligand.pdbqt -nrun 10 -ndock 1
+echo "============================================================================================"
