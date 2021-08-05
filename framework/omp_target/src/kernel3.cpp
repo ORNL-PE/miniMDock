@@ -48,7 +48,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 	// probability, and if it not to be subjected to local search, the entity with ID
 	// num_of_lsentities is selected instead of the first one (with ID 0).
 {
-	#pragma omp target teams distribute
+	#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)
 	//     num_teams(pops_by_runs) thread_limit(work_pteam)
 	for (int idx = 0; idx < pops_by_runs; idx++) {  // for teams
 
@@ -114,12 +114,14 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 		size_t offset =
 			(run_id * dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
 
-
-		#pragma omp parallel for 
+		int ngenes =  dockpars.num_of_genes;
+		#pragma omp parallel for default(none) \
+			shared(offspring_genotype,  genotype_bias) \
+			firstprivate(work_pteam, ngenes, pMem_conformations_next, offset)
 		for (int j = 0; j < work_pteam; j++) {
 			//	      float candidate_energy;
 			//--- thread barrier
-			for (uint32_t gene_counter = j; gene_counter < dockpars.num_of_genes;
+			for (uint32_t gene_counter = j; gene_counter < ngenes;
 				gene_counter += work_pteam) {
 				offspring_genotype[gene_counter] =
 					pMem_conformations_next[offset + gene_counter];
@@ -135,10 +137,14 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			float lig_scale = 1.0f / sqrt((float)dockpars.num_of_atoms);
 			float gene_scale = 1.0f / sqrt((float)dockpars.num_of_genes);
 			#endif
-			#pragma omp parallel for reduction(+ : energy_idx)
+			#pragma omp parallel for reduction(+ : energy_idx) default(none) \
+					shared(cData, genotype_deviate, partial_energy, offspring_genotype, \
+					dockpars, genotype_candidate, calc_coords,genotype_bias ) \
+					firstprivate(idx, gene_scale, work_pteam, ngenes, run_id ,\
+					lig_scale, rho)
 			for (int j = 0; j < work_pteam; j++) {
 				// New random deviate
-				for (uint32_t gene_counter = j; gene_counter < dockpars.num_of_genes;
+				for (uint32_t gene_counter = j; gene_counter < ngenes;
 					gene_counter += work_pteam) {
 				#ifdef SWAT3
 					genotype_deviate[gene_counter] =
@@ -177,7 +183,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				}
 
 				// Generating new genotype candidate
-				for (uint32_t gene_counter = j; gene_counter < dockpars.num_of_genes;
+				for (uint32_t gene_counter = j; gene_counter < ngenes;
 					gene_counter += work_pteam) {
 					genotype_candidate[gene_counter] = offspring_genotype[gene_counter] +
 						genotype_deviate[gene_counter] +
@@ -208,8 +214,10 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			//--- thread barrier
 
 			if (candidate_energy < offspring_energy) {  // If candidate is better, success
-				#pragma omp parallel for 
-				for (uint32_t gene_counter = 0; gene_counter < dockpars.num_of_genes;
+				#pragma omp parallel for default(none) \
+					shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate) \
+					firstprivate(ngenes)
+				for (uint32_t gene_counter = 0; gene_counter < ngenes;
 					gene_counter += 1) {
 					// Updating offspring_genotype
 					offspring_genotype[gene_counter] = genotype_candidate[gene_counter];
@@ -234,8 +242,10 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			else {   // If candidate is worser, check the opposite direction
 				// Generating the other genotype candidate
 				float energy_idx = 0.0f;
-				#pragma omp parallel for 
-				for (uint32_t gene_counter = 0; gene_counter < dockpars.num_of_genes;
+				#pragma omp parallel for default(none) \
+					shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate) \
+					firstprivate(ngenes)
+				for (uint32_t gene_counter = 0; gene_counter < ngenes;
 					gene_counter += 1) {
 					genotype_candidate[gene_counter] =
 						offspring_genotype[gene_counter] -
@@ -245,7 +255,9 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				// Evaluating candidate
 				//--- thread barrier
 				// =================================================================
-				#pragma omp parallel for reduction(+ : energy_idx)
+				#pragma omp parallel for reduction(+ : energy_idx) default(none) \
+						firstprivate(run_id, work_pteam) \
+						shared(genotype_candidate, calc_coords, dockpars, cData, partial_energy)
 				for (int j = 0; j < work_pteam; j++) {
 					partial_energy[j] = gpu_calc_energy(genotype_candidate,
 						// candidate_energy,
@@ -275,9 +287,11 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				if (candidate_energy <
 					offspring_energy)  // If candidate is better, success
 				{
-					#pragma omp parallel for 
+					#pragma omp parallel for default(none) \
+					    firstprivate(ngenes) \
+						shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate)
 					for (uint32_t gene_counter = 0;
-						gene_counter < dockpars.num_of_genes;
+						gene_counter < ngenes;
 						gene_counter += 1) {
 						// Updating offspring_genotype
 						offspring_genotype[gene_counter] =
@@ -293,16 +307,18 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 						// used in the previous if condition
 						//--- thread barrier
 
-					if (0 == 0) {
+					//if (j == 0) 
+					{
 						offspring_energy = candidate_energy;
 						cons_succ++;
 						cons_fail = 0;
 					}
 				}
 				else { // Failure in both directions
-					#pragma omp parallel for
+					#pragma omp parallel for default(none) firstprivate(ngenes) \
+					    shared(genotype_bias, genotype_bias)
 					for (uint32_t gene_counter = 0;
-						gene_counter < dockpars.num_of_genes;
+						gene_counter < ngenes;
 						gene_counter += 1){
 						// Updating genotype_bias
 						genotype_bias[gene_counter] = 0.5f * genotype_bias[gene_counter];
@@ -344,8 +360,9 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 		// Mapping torsion angles and writing out results
 //		offset =
 //			(run_id * dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
-		#pragma omp parallel for 
-		for (uint32_t gene_counter = 0; gene_counter < dockpars.num_of_genes;
+		#pragma omp parallel for default(none) firstprivate(offset, ngenes, pMem_conformations_next) \
+		        shared(offspring_genotype,  offspring_genotype)
+		for (uint32_t gene_counter = 0; gene_counter < ngenes;
 			gene_counter += 1) {
 			if (gene_counter >= 3) {
 				map_angle(offspring_genotype[gene_counter]);
