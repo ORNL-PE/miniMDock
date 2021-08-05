@@ -30,7 +30,7 @@ endif
 ifeq ($(API),CUDA)
  override DEVICE:=GPU
  export
- include Makefile.Cuda
+ include Makefile.Cuda$(FLAVOR)
 else
 ifeq ($(API),HIP)
   override DEVICE:=GPU
