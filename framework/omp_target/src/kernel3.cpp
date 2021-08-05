@@ -48,7 +48,8 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 	// probability, and if it not to be subjected to local search, the entity with ID
 	// num_of_lsentities is selected instead of the first one (with ID 0).
 {
-	#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)
+	// FIXME : thread_limit(NUMOF_THREADS_PER_BLOCK)  generates wrong results
+	#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK+1)
 	//     num_teams(pops_by_runs) thread_limit(work_pteam)
 	for (int idx = 0; idx < pops_by_runs; idx++) {  // for teams
 
@@ -82,7 +83,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 		   allocator(omp_pteam_mem_alloc)
 		  */
 
-		int run_id = idx / dockpars.num_of_lsentities;
+		const int run_id = idx / dockpars.num_of_lsentities;
 
 		// Determining run ID and entity ID
 		// Initializing offspring genotype
@@ -111,10 +112,10 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			evaluation_cnt = 0;
 		}
 
-		size_t offset =
+		const size_t offset =
 			(run_id * dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
 
-		int ngenes =  dockpars.num_of_genes;
+		const int ngenes =  dockpars.num_of_genes;
 		#pragma omp parallel for default(none) \
 			shared(offspring_genotype,  genotype_bias) \
 			firstprivate(work_pteam, ngenes, pMem_conformations_next, offset)
@@ -134,8 +135,8 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			(rho > dockpars.rho_lower_bound)) {
 			float energy_idx = 0.0f;
 			#ifdef SWAT3
-			float lig_scale = 1.0f / sqrt((float)dockpars.num_of_atoms);
-			float gene_scale = 1.0f / sqrt((float)dockpars.num_of_genes);
+			const float lig_scale = 1.0f / sqrt((float)dockpars.num_of_atoms);
+			const float gene_scale = 1.0f / sqrt((float)dockpars.num_of_genes);
 			#endif
 			#pragma omp parallel for reduction(+ : energy_idx) default(none) \
 					shared(cData, genotype_deviate, partial_energy, offspring_genotype, \
