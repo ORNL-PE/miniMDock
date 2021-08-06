@@ -116,18 +116,16 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			(run_id * dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
 
 		const int num_of_genes =  dockpars.num_of_genes;
+		//	      float candidate_energy;
+		//--- thread barrier
 		#pragma omp parallel for default(none) \
-			shared(offspring_genotype,  genotype_bias) \
-			firstprivate(work_pteam, num_of_genes, pMem_conformations_next, offset)
-		for (int j = 0; j < work_pteam; j++) {
-			//	      float candidate_energy;
-			//--- thread barrier
-			for (uint32_t gene_counter = j; gene_counter < num_of_genes;
-				gene_counter += work_pteam) {
-				offspring_genotype[gene_counter] =
-					pMem_conformations_next[offset + gene_counter];
-				genotype_bias[gene_counter] = 0.0f;
-			}
+			shared(offspring_genotype,  genotype_bias, pMem_conformations_next) \
+			firstprivate(num_of_genes, offset)
+		for (uint32_t gene_counter = 0; gene_counter < num_of_genes;
+			gene_counter += 1) {
+			offspring_genotype[gene_counter] =
+				pMem_conformations_next[offset + gene_counter];
+			genotype_bias[gene_counter] = 0.0f;
 		}
 
 		//--- thread barrier
