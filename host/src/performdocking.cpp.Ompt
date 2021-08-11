@@ -192,12 +192,20 @@ void setup_gpu_for_docking(GpuData& cData)
 
     #pragma omp target enter data map(to: cData)
 
-    #pragma omp target enter data map(alloc: cData.pKerconst_interintra) 
+    #pragma omp target enter data map(alloc: cData.pKerconst_interintra[:1]) 
+    #pragma omp target enter data map(alloc: cData.pKerconst_intra[:1])
+    #pragma omp target enter data map(alloc: cData.pKerconst_rotlist[:1])
+    #pragma omp target enter data map(alloc: cData.pKerconst_conform[:1])
+    #pragma omp target enter data map(alloc: cData.pKerconst_intracontrib[:1])
+
+/* // This approach works for llvm only   
+    #pragma omp target enter data map(alloc: cData.pKerconst_interintra)
     #pragma omp target enter data map(alloc: cData.pKerconst_intra)
     #pragma omp target enter data map(alloc: cData.pKerconst_rotlist)
     #pragma omp target enter data map(alloc: cData.pKerconst_conform)
     #pragma omp target enter data map(alloc: cData.pKerconst_intracontrib)
-    
+*/
+ 
    // #pragma omp target enter data map(alloc: cData.pMem_rotbonds_const)
     #pragma omp target enter data map(alloc: cData.pMem_rotbonds_const[:sz_rotbonds_const])
     
@@ -352,13 +360,20 @@ filled with clock() */
         }
 
     // Seems values fly to device without explicit updates
-    /*
+    /* This approch works for llvm only 
     #pragma omp target update to(cData.pKerconst_interintra)
     #pragma omp target update to(cData.pKerconst_intra)
     #pragma omp target update to(cData.pKerconst_rotlist)
     #pragma omp target update to(cData.pKerconst_conform)
     #pragma omp target update to(cData.pKerconst_intracontrib)
     */
+
+   //  This is necessary for nvhpc
+    #pragma omp target update to(cData.pKerconst_interintra[:1])
+    #pragma omp target update to(cData.pKerconst_intra[:1])
+    #pragma omp target update to(cData.pKerconst_rotlist[:1])
+    #pragma omp target update to(cData.pKerconst_conform[:1])
+    #pragma omp target update to(cData.pKerconst_intracontrib[:1])
 
     size_t sz_rotbonds_const = 2*MAX_NUM_OF_ROTBONDS;
     size_t sz_rotbonds_atoms_const = MAX_NUM_OF_ATOMS*MAX_NUM_OF_ROTBONDS;
