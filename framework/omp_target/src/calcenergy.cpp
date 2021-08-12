@@ -112,7 +112,7 @@ inline float4struct quaternion_rotate(float4struct v, float4struct rot)
 // ================================================
 
 #pragma omp declare target
-void get_atompos(
+inline void get_atompos(
             const int atom_id,
             float3struct* calc_coords,
             GpuData& cData)
@@ -125,7 +125,7 @@ void get_atompos(
 // ================================================
 // CALCULATING ATOMIC POSITIONS AFTER ROTATIONS
 // ================================================
-void rotate_atoms( 
+inline void rotate_atoms( 
 			const int rotation_counter,
 			float3struct* calc_coords,
 			GpuData& cData,
@@ -192,8 +192,11 @@ void rotate_atoms(
 
         // Performing final movement and storing values
         float4struct qt = quaternion_rotate(atom_to_rotate,quatrot_left);
+ //       #pragma omp atomic write
         calc_coords[atom_id].x = qt.x + rotation_movingvec.x;
+ //       #pragma omp atomic write
         calc_coords[atom_id].y = qt.y + rotation_movingvec.y;
+//        #pragma omp atomic write
         calc_coords[atom_id].z = qt.z + rotation_movingvec.z;
     } // End if-statement not dummy rotation
 
@@ -205,7 +208,7 @@ void rotate_atoms(
 // ================================================
 // CALCULATING INTERMOLECULAR ENERGY
 // ================================================
-float calc_interenergy(
+inline float calc_interenergy(
               const int atom_id,
               GpuDockparameters &dockpars,
               GpuData& cData,
@@ -286,7 +289,7 @@ float calc_interenergy(
 // ================================================
 // CALCULATING INTRAMOLECULAR ENERGY
 // ================================================
-float calc_intraenergy(
+inline float calc_intraenergy(
 			       const int contributor_counter,
 			       GpuDockparameters &dockpars,
 			       GpuData& cData,

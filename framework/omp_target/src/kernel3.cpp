@@ -25,7 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include <cstdint>
 #include "auxiliary_genetic.hpp"
-#include "calcenergy.hpp"
+#include "calcenergy.cpp"
 #include "kernels.hpp"
 
 // if defined, new (experimental) SW genotype moves that are dependent
@@ -52,15 +52,15 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 	//#pragma omp target teams distribute 
 	#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)
 	//     num_teams(pops_by_runs) thread_limit(work_pteam)
-	for (int idx = 0; idx < pops_by_runs; idx++) {  // for teams
+	for (uint32_t idx = 0; idx < pops_by_runs; idx++) {  // for teams
 
 		float genotype_candidate[ACTUAL_GENOTYPE_LENGTH];
 		float genotype_deviate[ACTUAL_GENOTYPE_LENGTH];
 		float genotype_bias[ACTUAL_GENOTYPE_LENGTH];
 		float rho;
-		int cons_succ;
-		int cons_fail;
-		int iteration_cnt;
+		uint32_t cons_succ;
+		uint32_t cons_fail;
+		uint32_t iteration_cnt;
 		int evaluation_cnt;
 		float3struct calc_coords[MAX_NUM_OF_ATOMS];
 		float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
@@ -122,7 +122,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 		#pragma omp parallel for default(none) \
 			shared(offspring_genotype,  genotype_bias, pMem_conformations_next) \
 			firstprivate(num_of_genes, offset)
-		for (uint32_t gene_counter = 0; gene_counter < num_of_genes;
+		for (int gene_counter = 0; gene_counter < num_of_genes;
 			gene_counter += 1) {
 			offspring_genotype[gene_counter] =
 				pMem_conformations_next[offset + gene_counter];
@@ -132,7 +132,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 		//--- thread barrier
 		while ((iteration_cnt < dockpars.max_num_of_iters) &&
 			(rho > dockpars.rho_lower_bound)) {
-			float energy_idx = 0.0f;
+
 			#ifdef SWAT3
 			const float lig_scale = 1.0f / sqrt((float)dockpars.num_of_atoms);
 			const float gene_scale = 1.0f / sqrt((float)dockpars.num_of_genes);
@@ -143,9 +143,9 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 					dockpars, genotype_candidate, calc_coords,genotype_bias ) \
 					firstprivate(idx, gene_scale, work_pteam, num_of_genes, run_id ,\
 					lig_scale, rho)
-			for (int j = 0; j < work_pteam; j++) {
+			for (uint32_t j = 0; j < work_pteam; j++) {
 				// New random deviate
-				for (uint32_t gene_counter = j; gene_counter < num_of_genes;
+				for (int gene_counter = j; gene_counter < num_of_genes;
 					gene_counter += work_pteam) {
 				#ifdef SWAT3
 					genotype_deviate[gene_counter] =
@@ -184,7 +184,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				}
 
 				// Generating new genotype candidate
-				for (uint32_t gene_counter = j; gene_counter < num_of_genes;
+				for (int gene_counter = j; gene_counter < num_of_genes;
 					gene_counter += work_pteam) {
 					genotype_candidate[gene_counter] = offspring_genotype[gene_counter] +
 						genotype_deviate[gene_counter] +
@@ -213,7 +213,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			        //======================= Calculating Energy ===============//
 			        // /*
         			#pragma omp parallel for
-        			for (uint atom_id = 0;
+        			for (int atom_id = 0;
                   			atom_id < dockpars.num_of_atoms;
                   			atom_id+= 1) {
             				get_atompos( atom_id, calc_coords, cData );
@@ -241,17 +241,15 @@ void gpu_perform_LS(uint32_t pops_by_runs,
         			//__threadfence();
         			//__syncthreads();
 
-        			//      #pragma omp parallel for
-        			for(int j = 0; j < work_pteam; j++){
-        			for (uint rotation_counter  = j;
+        			#pragma omp parallel for firstprivate(run_id)
+        			for (int rotation_counter  = 0;
                   			rotation_counter  < dockpars.rotbondlist_length;
-                  			rotation_counter += work_pteam){
+                  			rotation_counter++){
             				rotate_atoms(rotation_counter, calc_coords, cData, run_id, genotype_candidate, genrot_unitvec, genrot_movingvec);
         			} // End rotation_counter for-loop
-        			}
 			        float inter_energy = 0.0f;
                     		#pragma omp parallel for reduction(+:inter_energy)
-                    		for (uint atom_id = 0;
+                    		for (int atom_id = 0;
                               		atom_id < dockpars.num_of_atoms;
                               		atom_id+= 1){
                         		inter_energy += calc_interenergy( atom_id, dockpars, cData, calc_coords );
@@ -260,7 +258,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
                        	 	//printf("inter energy: %f \n", inter_energy);
                     		float intra_energy = 0.0f;
                     		#pragma omp parallel for reduction(+:intra_energy)
-                    		for (uint contributor_counter = 0;
+                    		for (int contributor_counter = 0;
                          		contributor_counter < dockpars.num_of_intraE_contributors;
                          		contributor_counter += 1){
                          		intra_energy += calc_intraenergy( contributor_counter, dockpars, cData, calc_coords );
@@ -277,7 +275,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				#pragma omp parallel for default(none) \
 					shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate) \
 					firstprivate(num_of_genes)
-				for (uint32_t gene_counter = 0; gene_counter < num_of_genes;
+				for (int gene_counter = 0; gene_counter < num_of_genes;
 					gene_counter += 1) {
 					// Updating offspring_genotype
 					offspring_genotype[gene_counter] = genotype_candidate[gene_counter];
@@ -293,7 +291,6 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				}
 				//if (j == 0) {
 				{
-					int j = 0;
 					offspring_energy = candidate_energy;
 					cons_succ++;
 					cons_fail = 0;
@@ -301,11 +298,10 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			}
 			else {   // If candidate is worser, check the opposite direction
 				// Generating the other genotype candidate
-				float energy_idx = 0.0f;
 				#pragma omp parallel for default(none) \
 					shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate) \
 					firstprivate(num_of_genes)
-				for (uint32_t gene_counter = 0; gene_counter < num_of_genes;
+				for (int gene_counter = 0; gene_counter < num_of_genes;
 					gene_counter += 1) {
 					genotype_candidate[gene_counter] =
 						offspring_genotype[gene_counter] -
@@ -333,7 +329,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				{
 			        //======================= Calculating Energy ===============//
 				#pragma omp parallel for
-                                for (uint atom_id = 0;
+                                for (int atom_id = 0;
                                         atom_id < dockpars.num_of_atoms;
                                         atom_id+= 1) {
                                         get_atompos( atom_id, calc_coords, cData );
@@ -361,17 +357,15 @@ void gpu_perform_LS(uint32_t pops_by_runs,
                                 //__threadfence();
                                 //__syncthreads();
 
-                                //      #pragma omp parallel for
-                                for(int j = 0; j < work_pteam; j++){
-                                for (uint rotation_counter  = j;
+                                #pragma omp parallel for
+                                for (int rotation_counter  = 0;
                                         rotation_counter  < dockpars.rotbondlist_length;
-                                        rotation_counter += work_pteam){
+                                        rotation_counter++){
                                         rotate_atoms(rotation_counter, calc_coords, cData, run_id, genotype_candidate, genrot_unitvec, genrot_movingvec);
                                 } // End rotation_counter for-loop
-                                }
                                 float inter_energy = 0.0f;
                                 #pragma omp parallel for reduction(+:inter_energy)
-                                for (uint atom_id = 0;
+                                for (int atom_id = 0;
                                         atom_id < dockpars.num_of_atoms;
                                         atom_id+= 1){
                                         inter_energy += calc_interenergy( atom_id, dockpars, cData, calc_coords );
@@ -380,7 +374,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
                                 //printf("inter energy: %f \n", inter_energy);
                                 float intra_energy = 0.0f;
                                 #pragma omp parallel for reduction(+:intra_energy)
-                                for (uint contributor_counter = 0;
+                                for (int contributor_counter = 0;
                                         contributor_counter < dockpars.num_of_intraE_contributors;
                                         contributor_counter += 1){
                                         intra_energy += calc_intraenergy( contributor_counter, dockpars, cData, calc_coords );
@@ -406,7 +400,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 					#pragma omp parallel for default(none) \
 					    firstprivate(num_of_genes) \
 						shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate)
-					for (uint32_t gene_counter = 0;
+					for (int gene_counter = 0;
 						gene_counter < num_of_genes;
 						gene_counter += 1) {
 						// Updating offspring_genotype
@@ -433,7 +427,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				else { // Failure in both directions
 					#pragma omp parallel for default(none) firstprivate(num_of_genes) \
 					    shared( genotype_bias)
-					for (uint32_t gene_counter = 0;
+					for (int gene_counter = 0;
 						gene_counter < num_of_genes;
 						gene_counter += 1){
 						// Updating genotype_bias
@@ -478,7 +472,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 //			(run_id * dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
 		#pragma omp parallel for default(none) firstprivate(offset, num_of_genes, pMem_conformations_next) \
 		        shared( offspring_genotype)
-		for (uint32_t gene_counter = 0; gene_counter < num_of_genes;
+		for (int gene_counter = 0; gene_counter < num_of_genes;
 			gene_counter += 1) {
 			if (gene_counter >= 3) {
 				map_angle(offspring_genotype[gene_counter]);

@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 #include "kernels.hpp"
-#include "calcenergy.hpp"
+#include "calcenergy.cpp"
 
 
 void gpu_calc_initpop(	uint32_t pops_by_runs, 
@@ -75,7 +75,7 @@ void gpu_calc_initpop(	uint32_t pops_by_runs,
         //__threadfence();
         //__syncthreads();
         
-        //      #pragma omp parallel for
+        #pragma omp parallel for
         for(int j = 0; j < work_pteam; j++){
         for (uint rotation_counter  = j;
                   rotation_counter  < dockpars.rotbondlist_length;

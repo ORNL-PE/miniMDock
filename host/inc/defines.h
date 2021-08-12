@@ -59,7 +59,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
   #elif defined (N256WI)
 	#define NUM_OF_THREADS_PER_BLOCK 256
   #else
-	#define NUM_OF_THREADS_PER_BLOCK 32
+	#define NUM_OF_THREADS_PER_BLOCK 64
   #endif
 #endif
 

@@ -23,7 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "kernels.hpp"
-#include "calcenergy.hpp"
+#include "calcenergy.cpp"
 #include "auxiliary_genetic.hpp"
 
 //#define DEBUG_ENERGY_KERNEL4
@@ -39,9 +39,9 @@ void gpu_gen_and_eval_newpops(
     GpuDockparameters dockpars
 )
 {
-    #pragma omp target teams distribute
+    #pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)
     //num_teams(pops_by_runs) thread_limit(work_pteam)
-    for (int idx = 0; idx < pops_by_runs; idx++)
+    for (uint32_t idx = 0; idx < pops_by_runs; idx++)
     {
         float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
         int parent_candidates[4];
@@ -52,7 +52,7 @@ void gpu_gen_and_eval_newpops(
         float bestEnergy[NUM_OF_THREADS_PER_BLOCK];
         int bestID[NUM_OF_THREADS_PER_BLOCK];
         float3struct calc_coords[MAX_NUM_OF_ATOMS];
-        int partial_energy[NUM_OF_THREADS_PER_BLOCK];
+        //int partial_energy[NUM_OF_THREADS_PER_BLOCK];
         //float energy;
 /*
 	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)	 
@@ -70,7 +70,7 @@ void gpu_gen_and_eval_newpops(
         // In this case this compute-unit is responsible for elitist selection
         if ((idx % dockpars.pop_size) == 0) {
             #pragma omp parallel for
-            for (int j = 0; j < work_pteam; j++){
+            for (uint32_t j = 0; j < work_pteam; j++){
                 // Find and copy best member of population to position 0
                 if (j <dockpars.pop_size)
                 {
@@ -92,13 +92,13 @@ void gpu_gen_and_eval_newpops(
            
         //if (j == 0)
             {
-            for(int entity_counter = 1; entity_counter < work_pteam; entity_counter++)
+            for(uint32_t entity_counter = 1; entity_counter < work_pteam; entity_counter++)
                 if ((bestEnergy[entity_counter] < bestEnergy[0]) && (entity_counter < dockpars.pop_size)){
                     bestEnergy[0] = bestEnergy[entity_counter];
                     bestID[0] = bestID[entity_counter];
                 }
-                pMem_energies_next[idx] = bestEnergy[0];
-                cData.pMem_evals_of_new_entities[idx] = 0;
+            pMem_energies_next[idx] = bestEnergy[0];
+            cData.pMem_evals_of_new_entities[idx] = 0;
             }
 //  */      
 //--- thread barrier
@@ -108,7 +108,7 @@ void gpu_gen_and_eval_newpops(
             //int sOffset = bestID * GENOTYPE_LENGTH_IN_GLOBMEM;
             int sOffset = bestID[0] * GENOTYPE_LENGTH_IN_GLOBMEM;
             #pragma omp parallel for
-            for (int j = 0; j < work_pteam; j++){
+            for (uint32_t j = 0; j < work_pteam; j++){
                 for (int i = j ; i < dockpars.num_of_genes; i += work_pteam)
                 {
                     pMem_conformations_next[dOffset + i] = pMem_conformations_current[sOffset + i];
@@ -122,7 +122,7 @@ void gpu_gen_and_eval_newpops(
             // [4..5] for binary tournaments, [6] for deciding crossover,
             // [7..8] for crossover points, [9] for local search
             #pragma omp parallel for
-            for (int j = 0; j < work_pteam; j++){
+            for (uint32_t j = 0; j < work_pteam; j++){
                 for (uint32_t gene_counter = j;
                      gene_counter < 10;
                      gene_counter += work_pteam) {
@@ -142,7 +142,7 @@ void gpu_gen_and_eval_newpops(
             run_id = idx / dockpars.pop_size;
 //--- thread barrier
             #pragma omp parallel for
-            for (int j = 0; j < work_pteam; j++){
+            for (uint32_t j = 0; j < work_pteam; j++){
                 if (j < 4)	//it is not ensured that the four candidates will be different...
                 {
                 parent_candidates[j]  = (int) (dockpars.pop_size*randnums[j]); //using randnums[0..3]
@@ -151,7 +151,7 @@ void gpu_gen_and_eval_newpops(
             }
 //--- thread barrier
             #pragma omp parallel for
-            for (int j = 0; j < work_pteam; j++){
+            for (uint32_t j = 0; j < work_pteam; j++){
                 if (j < 2)
                 {
                     // Notice: dockpars_tournament_rate was scaled down to [0,1] in host
@@ -182,7 +182,7 @@ void gpu_gen_and_eval_newpops(
             if (/*100.0f**/randnums[6] < dockpars.crossover_rate)	// Using randnums[6]
             {
                 #pragma omp parallel for
-                for (int j = 0; j < work_pteam; j++){
+                for (uint32_t j = 0; j < work_pteam; j++){
                     if (j < 2) {
                         // Using randnum[7..8]
                         covr_point[j] = (int) ((dockpars.num_of_genes-1)*randnums[7+j]);
@@ -202,8 +202,8 @@ void gpu_gen_and_eval_newpops(
 
     //--- thread barrier
                 #pragma omp parallel for
-                for (int j = 0; j < work_pteam; j++){
-                for (uint32_t gene_counter = j;
+                for (uint32_t j = 0; j < work_pteam; j++){
+                     for (uint32_t gene_counter = j;
                      gene_counter < dockpars.num_of_genes;
                      gene_counter+= work_pteam)
                 {
