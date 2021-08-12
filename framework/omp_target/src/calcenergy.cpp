@@ -131,8 +131,8 @@ void rotate_atoms(
 			GpuData& cData,
 			const int run_id, 
 			float* pGenotype,
-			float4struct genrot_unitvec,
-			float4struct genrot_movingvec				
+			float4struct& genrot_unitvec,
+			float4struct& genrot_movingvec				
 			)
 {
     int rotation_list_element = cData.pKerconst_rotlist->rotlist_const[rotation_counter];

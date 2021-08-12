@@ -18,8 +18,8 @@ void rotate_atoms(
 			GpuData& cData,
 			const int run_id, 
 			float* pGenotype,
-			float4struct genrot_unitvec,
-			float4struct genrot_movingvec);
+			float4struct& genrot_unitvec,
+			float4struct& genrot_movingvec);
 
 float calc_interenergy(
               const int atom_id,

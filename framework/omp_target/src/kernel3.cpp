@@ -241,14 +241,14 @@ void gpu_perform_LS(uint32_t pops_by_runs,
         			//__threadfence();
         			//__syncthreads();
 
-        			//      #pragma omp parallel for
-        			for(int j = 0; j < work_pteam; j++){
-        			for (uint rotation_counter  = j;
+        			//#pragma omp parallel for
+        			//for(int j = 0; j < work_pteam; j++){
+        			for (uint rotation_counter  = 0;
                   			rotation_counter  < dockpars.rotbondlist_length;
-                  			rotation_counter += work_pteam){
+                  			rotation_counter += 1){
             				rotate_atoms(rotation_counter, calc_coords, cData, run_id, genotype_candidate, genrot_unitvec, genrot_movingvec);
         			} // End rotation_counter for-loop
-        			}
+        			//}
 			        float inter_energy = 0.0f;
                     		#pragma omp parallel for reduction(+:inter_energy)
                     		for (uint atom_id = 0;
@@ -361,14 +361,14 @@ void gpu_perform_LS(uint32_t pops_by_runs,
                                 //__threadfence();
                                 //__syncthreads();
 
-                                //      #pragma omp parallel for
-                                for(int j = 0; j < work_pteam; j++){
-                                for (uint rotation_counter  = j;
+                                //#pragma omp parallel for
+                                //for(int j = 0; j < work_pteam; j++){
+                                for (uint rotation_counter  = 0;
                                         rotation_counter  < dockpars.rotbondlist_length;
-                                        rotation_counter += work_pteam){
+                                        rotation_counter += 1){
                                         rotate_atoms(rotation_counter, calc_coords, cData, run_id, genotype_candidate, genrot_unitvec, genrot_movingvec);
                                 } // End rotation_counter for-loop
-                                }
+                                //}
                                 float inter_energy = 0.0f;
                                 #pragma omp parallel for reduction(+:inter_energy)
                                 for (uint atom_id = 0;

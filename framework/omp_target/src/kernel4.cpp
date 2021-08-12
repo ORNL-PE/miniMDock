@@ -302,14 +302,14 @@ void gpu_gen_and_eval_newpops(
                    //__threadfence();
                    //__syncthreads();
 
-                   //      #pragma omp parallel for
-                   for(int j = 0; j < work_pteam; j++){
-                   for (uint rotation_counter  = j;
+                   //#pragma omp parallel for
+                   //for(int j = 0; j < work_pteam; j++){
+                   for (uint rotation_counter  = 0;
                            rotation_counter  < dockpars.rotbondlist_length;
-                           rotation_counter += work_pteam){
+                           rotation_counter += 1){
                            rotate_atoms(rotation_counter, calc_coords, cData, run_id, offspring_genotype, genrot_unitvec, genrot_movingvec);
                    } // End rotation_counter for-loop
-                   }
+                   //}
                    float inter_energy = 0.0f;
                    #pragma omp parallel for reduction(+:inter_energy)
                    for (uint atom_id = 0;

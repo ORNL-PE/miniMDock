@@ -52,7 +52,7 @@ void gpu_calc_initpop(	uint32_t pops_by_runs,
           	  atom_id+= 1) {
             get_atompos( atom_id, calc_coords, cData );
         }
-//	*/
+	
         // General rotation moving vector
         float4struct genrot_movingvec;
         genrot_movingvec.x = pGenotype[0];
@@ -71,18 +71,18 @@ void gpu_calc_initpop(	uint32_t pops_by_runs,
         genrot_unitvec.y = s2*sin_angle*sin(phi);
         genrot_unitvec.z = s2*cos(theta);
         genrot_unitvec.w = cos(genrotangle*0.5f);
-            
+    
         //__threadfence();
         //__syncthreads();
         
-        //      #pragma omp parallel for
-        for(int j = 0; j < work_pteam; j++){
-        for (uint rotation_counter  = j;
+        //#pragma omp parallel for
+        //for(int j = 0; j < work_pteam; j++){
+        for (uint rotation_counter  = 0;
                   rotation_counter  < dockpars.rotbondlist_length;
-                  rotation_counter += work_pteam){
+                  rotation_counter += 1){
             rotate_atoms(rotation_counter, calc_coords, cData, run_id, pGenotype, genrot_unitvec, genrot_movingvec);
         } // End rotation_counter for-loop
-        }
+        //}
 
         float inter_energy = 0.0f;
         #pragma omp parallel for reduction(+:inter_energy)
