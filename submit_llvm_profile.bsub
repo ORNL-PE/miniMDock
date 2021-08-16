@@ -13,4 +13,4 @@ module load llvm/13.0.0-latest
 
 cd $MEMBERWORK/stf010/miniMDock
 date
-jsrun -n 1 -g 1 -c 21 nvprof --analysis-metrics -f -o minidock_llvm.prof ./bin/autodock_ompt_nv_llvm -lfile ./input/7cpa/7cpa_ligand.pdbqt -nrun 10 -ndock 1
+jsrun -n 1 -g 1 -c 21 nvprof --analysis-metrics -f -o minidock_llvm_noinlne_new.prof ./bin/autodock_ompt_nv_llvm -lfile ./input/7cpa/7cpa_ligand.pdbqt -nrun 10 -ndock 1
