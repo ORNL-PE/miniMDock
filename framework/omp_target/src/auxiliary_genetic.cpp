@@ -30,7 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // -------------------------------------------------------
 
 #pragma omp declare target
- uint32_t gpu_rand(
+ inline uint32_t gpu_rand(
     	uint32_t* prng_states,
     	int blockIdx, int threadIdx
 )
@@ -62,7 +62,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // -------------------------------------------------------
 //
 // -------------------------------------------------------
- float gpu_randf(
+ inline float gpu_randf(
 		uint32_t* prng_states,
 		int blockIdx, int threadIdx
 )
@@ -81,7 +81,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // -------------------------------------------------------
 //
 // -------------------------------------------------------
- void map_angle(float& angle)
+ inline void map_angle(float& angle)
 // The GPU device function maps
 // the input parameter to the interval 0...360
 // (supposing that it is an angle).

@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
 #include <cstdint>
-#include "auxiliary_genetic.hpp"
+#include "auxiliary_genetic.cpp"
 #include "calcenergy.cpp"
 #include "kernels.hpp"
 
