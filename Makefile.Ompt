@@ -30,6 +30,9 @@ else ifeq ($(COMPILER), gcc)
 else ifeq ($(COMPILER), CC)
       CPP=CC -fopenmp 
       COMP=cce
+else ifeq ($(COMPILER), ROCM)
+      CPP=clang++  -fopenmp -target x86_64-pc-linux-gnu -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
+      COMP=rocm
 endif
 
 # ------------------------------------------------------
