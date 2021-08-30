@@ -27,6 +27,9 @@ else ifeq ($(COMPILER), nvhpc)
 else ifeq ($(COMPILER), gcc)
       CPP=g++ -fopenmp -foffload=-lm  -O2 -std=c++17
       COMP=gcc
+else ifeq ($(COMPILER), CC)
+      CPP=CC -fopenmp 
+      COMP=cce
 endif
 
 # ------------------------------------------------------
