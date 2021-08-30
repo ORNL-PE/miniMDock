@@ -9,8 +9,11 @@
 #BSUB -e runminiMdock.%J
 
 module use /sw/summit/modulefiles/ums/stf010/Core
-module load llvm/13.0.0-latest
+#module load llvm/14.0.0-20210819 cuda
+module load llvm/13.0.0-20210810 cuda/10.1.243
+#module load llvm/12.0.0 cuda
 
 cd $MEMBERWORK/stf010/miniMDock
 date
+export OMPI_LD_PRELOAD_PREPEND=/sw/summit/llvm/12.0.0/12.0.0-0/lib/libarcher.so:$OMPI_LD_PRELOAD_PREPEND
 jsrun -n 1 -g 1 -c 21 ./bin/autodock_ompt_nv_llvm -lfile ./input/7cpa/7cpa_ligand.pdbqt -nrun 10 -ndock 1

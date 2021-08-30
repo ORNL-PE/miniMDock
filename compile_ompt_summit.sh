@@ -1,9 +1,10 @@
 #!/bin/bash
 
 
- module load cuda
+ module load cuda/10.1.243
  module use /sw/summit/modulefiles/ums/stf010/Core
- module load llvm/12.0.0-20210125
+ #module load llvm/14.0.0-20210819
+ module load llvm/13.0.0-latest
 
  export GPU_PATH=${OLCF_CUDA_ROOT}
 
@@ -12,5 +13,5 @@
 
  #module load xl/16.1.1-10
 
- make API=OMPT
+ make API=OMPT COMPILER=llvm
 
