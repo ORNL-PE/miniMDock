@@ -21,7 +21,7 @@ else ifeq ($(COMPILER), xl)
       COMP=xl
 #Using NVIDIA nvc++ compiler
 else ifeq ($(COMPILER), nvhpc)
-      CPP=nvc++ -std=c++17 -mp=gpu -fast
+      CPP=nvc++ -std=c++17 -mp=gpu -fast -gpu=cc70
       COMP=nvhpc
 #Using gcc 
 else ifeq ($(COMPILER), gcc)
