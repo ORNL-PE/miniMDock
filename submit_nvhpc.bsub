@@ -9,8 +9,8 @@
 #BSUB -e runminiMdocknvhpc.%J
 
 module use /sw/summit/modulefiles/ums/stf010/Core
-module load nvhpc
+module load nvhpc/21.7
 
 cd $MEMBERWORK/stf010/miniMDock
 date
-jsrun -n 1 -g 1 -c 21 ./bin/autodock_ompt_nv_nvhpc -lfile ./input/7cpa/7cpa_ligand.pdbqt -nrun 10 -ndock 1
+jsrun --smpiargs="-disable_gpu_hooks"  -n 1 -g 1 -c 21 ./bin/autodock_ompt_nv_nvhpc -lfile ./input/7cpa/7cpa_ligand.pdbqt -nrun 10 -ndock 1
