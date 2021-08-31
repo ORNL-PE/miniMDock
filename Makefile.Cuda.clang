@@ -12,7 +12,7 @@
 # Valid values: CPU, GPU
 
 NVCC = clang
-CPP = g++
+CPP = clang++
 UNAME := $(shell uname)
 
 TARGETS = 52 61 70
