@@ -1,4 +1,4 @@
 #!/bin/bash
-module load rocm craype-accel-amd-gfx908 cce
+module load PrgEnv-cray craype-accel-amd-gfx908 rocm
 make API=OMPT COMPILER=CC
 
