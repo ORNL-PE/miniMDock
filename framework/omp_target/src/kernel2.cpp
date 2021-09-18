@@ -28,8 +28,8 @@ void gpu_sum_evals(uint32_t nruns,
                    GpuData& cData,
                    GpuDockparameters dockpars)
 {
-    #pragma omp target teams distribute
-//    num_teams(nruns) thread_limit(work_pteam)
+    #pragma omp target teams distribute\
+     num_teams(nruns) thread_limit(NUM_OF_THREADS_PER_BLOCK)
     for (int idx = 0; idx < nruns; idx++ ) {
     
         int sum_evals = 0;

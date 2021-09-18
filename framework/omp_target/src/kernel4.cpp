@@ -39,8 +39,8 @@ void gpu_gen_and_eval_newpops(
     GpuDockparameters dockpars
 )
 {
-    #pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)
-    //num_teams(pops_by_runs) thread_limit(work_pteam)
+    #pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)\
+    num_teams(pops_by_runs) 
     for (uint32_t idx = 0; idx < pops_by_runs; idx++)
     {
         float offspring_genotype[ACTUAL_GENOTYPE_LENGTH];
@@ -53,7 +53,7 @@ void gpu_gen_and_eval_newpops(
         int bestID[NUM_OF_THREADS_PER_BLOCK];
         float3struct calc_coords[MAX_NUM_OF_ATOMS];
         //int partial_energy[NUM_OF_THREADS_PER_BLOCK];
-        //float energy;
+        float energy;
 /*
 	 #pragma omp allocate(offspring_genotype) allocator(omp_pteam_mem_alloc)	 
 	 #pragma omp allocate(parent_candidates) allocator(omp_pteam_mem_alloc)	 
@@ -272,7 +272,7 @@ void gpu_gen_and_eval_newpops(
             //if (j == 0)
             {
                 //======================= Calculating Energy ===============//
-		   float energy = 0.0f;
+		   energy = 0.0f;
                    #pragma omp parallel for
                    for (uint atom_id = 0;
                            atom_id < dockpars.num_of_atoms;
@@ -302,32 +302,37 @@ void gpu_gen_and_eval_newpops(
                    //__threadfence();
                    //__syncthreads();
 
-                   //      #pragma omp parallel for
-                   for(int j = 0; j < work_pteam; j++){
-                   for (uint rotation_counter  = j;
-                           rotation_counter  < dockpars.rotbondlist_length;
-                           rotation_counter += work_pteam){
-                           rotate_atoms(rotation_counter, calc_coords, cData, run_id, offspring_genotype, genrot_unitvec, genrot_movingvec);
-                   } // End rotation_counter for-loop
-                   }
-                   float inter_energy = 0.0f;
-                   #pragma omp parallel for reduction(+:inter_energy)
+		    int num_of_rotcyc = dockpars.rotbondlist_length/work_pteam;
+        	    for(int rot=0; rot < num_of_rotcyc; rot++){
+            		int start = rot*work_pteam;
+            		int end = start +work_pteam;
+            		if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
+            		#pragma omp parallel for
+            		for (int rotation_counter  = start;
+                 		rotation_counter  < end;
+                 		rotation_counter++){
+				rotate_atoms(rotation_counter, calc_coords, cData, run_id, offspring_genotype, genrot_unitvec, genrot_movingvec);
+            		}
+       	 	     } // End rotation_counter for-loop
+
+          //         float inter_energy = 0.0f;
+                   #pragma omp parallel for reduction(+:energy)
                    for (uint atom_id = 0;
                            atom_id < dockpars.num_of_atoms;
                            atom_id+= 1){
-                           inter_energy += calc_interenergy( atom_id, dockpars, cData, calc_coords );
+                           energy += calc_interenergy( atom_id, dockpars, cData, calc_coords );
                     } // End atom_id for-loop (INTERMOLECULAR ENERGY)
 
                    //printf("inter energy: %f \n", inter_energy);
-                   float intra_energy = 0.0f;
-                   #pragma omp parallel for reduction(+:intra_energy)
+                   //float intra_energy = 0.0f;
+                   #pragma omp parallel for reduction(+:energy)
                    for (uint contributor_counter = 0;
                            contributor_counter < dockpars.num_of_intraE_contributors;
                            contributor_counter += 1){
-                           intra_energy += calc_intraenergy( contributor_counter, dockpars, cData, calc_coords );
+                           energy += calc_intraenergy( contributor_counter, dockpars, cData, calc_coords );
                    }
                    //printf("intra energy: %f \n", intra_energy);
-                   energy = (inter_energy +intra_energy);
+                   //energy = (inter_energy +intra_energy);
                    // =================================================================
 
                 pMem_energies_next[idx] = energy;
