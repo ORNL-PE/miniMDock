@@ -37,14 +37,8 @@ void gpu_sum_evals(uint32_t nruns,
 
     	int* pEvals_of_new_entities = cData.pMem_evals_of_new_entities + idx * dockpars.pop_size;
         #pragma omp parallel for reduction(+:sum_evals)
-        for (int j = 0; j < work_pteam; j++){
-             int partsum_evals = 0;
-             for (int entity_counter = j; entity_counter < dockpars.pop_size; entity_counter +=work_pteam) 
-             {
-	         sum_evals += pEvals_of_new_entities[entity_counter];
-	     }
-             sum_evals += partsum_evals;
-
+        for (int entity_counter = 0; entity_counter < dockpars.pop_size; entity_counter++){
+		sum_evals += pEvals_of_new_entities[entity_counter];
         }// End for a team
         cData.pMem_gpu_evals_of_runs[idx] += sum_evals;
         //printf("k2_%d(%d, %d)\n", idx, cData.pMem_gpu_evals_of_runs[idx], sum_evals );
