@@ -38,10 +38,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #define PHI 0x9e3779b9
 //Visual C++ linear congruential generator constants
-#ifdef USE_KOKKOS
+//#ifdef USE_KOKKOS
  #define RAND_A_GS 214013u
  #define RAND_C_GS 2531011u
-#endif
+//#endif
 typedef struct
 //Struct which describes a quaternion.
 {
@@ -102,6 +102,7 @@ int stricmp(const char*, const char*);
 int strincmp(const char*, const char*, int);
 #endif
 
+/*
 class LocalRNG
 {
 	uint32_t Q[4096], i, c; // CMWC4096 variables
@@ -157,6 +158,49 @@ public:
 	}
 };
 
+*/
+
+
+class LocalRNG
+{
+        unsigned int state;
+        
+        void Init(unsigned int seed)
+        {
+            state = seed;
+        }
+        
+
+        public:
+        LocalRNG(unsigned int seed)
+        {
+            Init(seed);
+        }
+
+        LocalRNG(){
+#if defined (REPRO)
+		Init(1u);
+#else
+		Init(time(NULL));
+#endif
+        }
+
+        //The function generates random numbers with a linear congruential generator, using Visual C++ generator constants.
+        unsigned int random_uint(){
+                state = (RAND_A_GS*state+RAND_C_GS);
+                return state;
+        }
+
+        float random_float(){
+		float max_uint = (float) std::numeric_limits<unsigned int>::max();
+		float output = 0.0f;
+
+		// Ensure random number is between 0 and 1
+		while (output<=0.0f || output>=1.0f)
+			output = (float)random_uint() / max_uint;
+                return output;
+        }
+};
 
 #ifdef USE_KOKKOS
 double myrand(void);

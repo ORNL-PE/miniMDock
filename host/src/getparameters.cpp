@@ -96,7 +96,7 @@ int get_filenames_and_ADcoeffs(const int* argc,
 
 	strcpy(mypars->fldfile, "./input/7cpa/7cpa_protein.maps.fld");
 	//strcpy(mypars->fldfile, "./input/3er5/protein.maps.fld");
-	//strcpy(mypars->fldfile, "./input/nsc1620/protein.maps.fld");
+//	strcpy(mypars->fldfile, "./input/nsc1620/protein.maps.fld");
 
 	for (i=1; i<(*argc)-1; i++)
 	{
@@ -181,6 +181,7 @@ void get_commandpars(const int* argc,
 	mypars->mutation_rate		= 2; 		// 2%
 	mypars->crossover_rate		= 80;		// 80%
 	mypars->lsearch_rate		= 80;		// 80%
+	mypars->seed		= time(NULL);		// seed based on the current time
 
 	strcpy(mypars->ls_method, "sw");		// "sw": Solis-Wets. 
 							// The following possible methods are not considered here
@@ -260,6 +261,11 @@ void get_commandpars(const int* argc,
                         else
                                 printf("Warning: value of -ndock argument ignored. Value must be an integer between 1 and %d.\n", MAX_NUM_OF_DOCKS);
                 }
+		 if (strcmp("-seed", argv[i]) == 0)
+        	{
+			arg_recognized = 1;
+			sscanf(argv[i+1], "%u", &(mypars->seed));
+        	}
 
 		if (arg_recognized != 1)
 			printf("Warning: unknown argument '%s'.\n", argv [i]);

@@ -400,7 +400,9 @@ filled with clock() */
     for(i=0; i<size_floatgrids; i++)
         cData.pMem_fgrids[i] = cpu_floatgrids[i];
  
-    LocalRNG r;
+    LocalRNG r(mypars->seed);
+    //LocalRNG r;
+    //printf("RNG seed is %u\n", mypars->seed);
     for (i=0; i<blocksPerGridForEachEntity*threadsPerBlock; i++)
          cData.pMem_prng_states[i] = r.random_uint();  
 
