@@ -72,6 +72,32 @@ endif
 
 BIN := $(wildcard $(TARGET)*)
 
+# ------------------------------------------------------
+# Number of work-items (wi)
+# Valid values: 32, 64, 128, 256
+NUMWI=64
+
+ifeq ($(NUMWI), 32)
+        NWI=-DN32WI
+        TARGET:=$(TARGET)_32wi
+else ifeq ($(NUMWI), 64)
+        NWI=-DN64WI
+        TARGET:=$(TARGET)_64wi
+else ifeq ($(NUMWI), 128)
+        NWI=-DN128WI
+        TARGET:=$(TARGET)_128wi
+else ifeq ($(NUMWI), 256)
+                NWI=-DN256WI
+                TARGET:=$(TARGET)_256wi
+else
+        ifeq ($(DEVICE), CPU)
+                NWI=-DN16WI
+                TARGET:=$(TARGET)_16wi
+        else ifeq ($(DEVICE), GPU)
+                NWI=-DN64WI
+                TARGET:=$(TARGET)_64wi
+        endif
+endif
 
 # ------------------------------------------------------
 # Configuration
