@@ -351,8 +351,8 @@ void gen_initpop_and_reflig(Dockpars*       mypars,
 		gen_pop = 1;
 
 	// Local random numbers for thread safety/reproducibility
-	LocalRNG r;
-
+	//LocalRNG r;
+        LocalRNG r(mypars->seed);
 	//Generating initial population
 	if (gen_pop == 1)
 	{
