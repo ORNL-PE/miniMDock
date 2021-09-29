@@ -180,7 +180,7 @@ void get_commandpars(const int* argc,
 	mypars->abs_max_dang		= 90; 		// +/- 90°
 	mypars->mutation_rate		= 2; 		// 2%
 	mypars->crossover_rate		= 80;		// 80%
-	mypars->lsearch_rate		= 80;		// 80%
+	mypars->lsearch_rate		= 100;		// 80%
 	mypars->seed		= time(NULL);		// seed based on the current time
 
 	strcpy(mypars->ls_method, "sw");		// "sw": Solis-Wets. 
