@@ -142,18 +142,14 @@ void gpu_gen_and_eval_newpops(
             run_id = idx / dockpars.pop_size;
 //--- thread barrier
             #pragma omp parallel for
-            for (uint32_t j = 0; j < work_pteam; j++){
-                if (j < 4)	//it is not ensured that the four candidates will be different...
-                {
+            for (uint32_t j = 0; j < 4; j++){
+                	//it is not ensured that the four candidates will be different...
                 parent_candidates[j]  = (int) (dockpars.pop_size*randnums[j]); //using randnums[0..3]
                 candidate_energies[j] = pMem_energies_current[run_id*dockpars.pop_size+parent_candidates[j]];
-                }
             }
 //--- thread barrier
             #pragma omp parallel for
-            for (uint32_t j = 0; j < work_pteam; j++){
-                if (j < 2)
-                {
+            for (uint32_t j = 0; j < 2; j++){
                     // Notice: dockpars_tournament_rate was scaled down to [0,1] in host
                     // to reduce number of operations in device
                     if (candidate_energies[2*j] < candidate_energies[2*j+1]){
@@ -173,7 +169,6 @@ void gpu_gen_and_eval_newpops(
                             parents[j] = parent_candidates[2*j];
                         }
                     }
-                }
             }
 //--- thread barrier
             // Performing crossover
@@ -182,11 +177,9 @@ void gpu_gen_and_eval_newpops(
             if (/*100.0f**/randnums[6] < dockpars.crossover_rate)	// Using randnums[6]
             {
                 #pragma omp parallel for
-                for (uint32_t j = 0; j < work_pteam; j++){
-                    if (j < 2) {
+                for (uint32_t j = 0; j < 2; j++){
                         // Using randnum[7..8]
                         covr_point[j] = (int) ((dockpars.num_of_genes-1)*randnums[7+j]);
-                    }
                 }
     //--- thread barrier
 
