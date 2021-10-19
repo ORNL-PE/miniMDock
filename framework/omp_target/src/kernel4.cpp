@@ -49,6 +49,8 @@ void gpu_gen_and_eval_newpops(
         int parents[2];
         int covr_point[2];
         float randnums[10];
+        //float bestEnergy[GENOTYPE_LENGTH_IN_GLOBMEM];
+        //int bestID[GENOTYPE_LENGTH_IN_GLOBMEM];
         float bestEnergy[NUM_OF_THREADS_PER_BLOCK];
         int bestID[NUM_OF_THREADS_PER_BLOCK];
         float3struct calc_coords[MAX_NUM_OF_ATOMS];
@@ -70,7 +72,7 @@ void gpu_gen_and_eval_newpops(
         // In this case this compute-unit is responsible for elitist selection
         if ((idx % dockpars.pop_size) == 0) {
             #pragma omp parallel for
-            for (uint32_t j = 0; j < work_pteam; j++){
+            for (uint32_t j = 0; j < NUM_OF_THREADS_PER_BLOCK; j++){
                 // Find and copy best member of population to position 0
                 if (j <dockpars.pop_size)
                 {
@@ -79,7 +81,7 @@ void gpu_gen_and_eval_newpops(
                 }
             
                 // Scan through population (we already picked up a work_pteam's worth above so skip)
-                for (int i = idx + work_pteam + j; i < idx + dockpars.pop_size; i += work_pteam)
+                for (int i = idx + NUM_OF_THREADS_PER_BLOCK + j; i < idx + dockpars.pop_size; i += NUM_OF_THREADS_PER_BLOCK)
                 {
                    float e = pMem_energies_current[i];
                    if (e < bestEnergy[j])
@@ -92,7 +94,7 @@ void gpu_gen_and_eval_newpops(
            
         //if (j == 0)
             {
-            for(uint32_t entity_counter = 1; entity_counter < work_pteam; entity_counter++)
+            for(uint32_t entity_counter = 1; entity_counter < NUM_OF_THREADS_PER_BLOCK; entity_counter++)
                 if ((bestEnergy[entity_counter] < bestEnergy[0]) && (entity_counter < dockpars.pop_size)){
                     bestEnergy[0] = bestEnergy[entity_counter];
                     bestID[0] = bestID[entity_counter];
@@ -108,12 +110,10 @@ void gpu_gen_and_eval_newpops(
             //int sOffset = bestID * GENOTYPE_LENGTH_IN_GLOBMEM;
             int sOffset = bestID[0] * GENOTYPE_LENGTH_IN_GLOBMEM;
             #pragma omp parallel for
-            for (uint32_t j = 0; j < work_pteam; j++){
-                for (int i = j ; i < dockpars.num_of_genes; i += work_pteam)
+                for (int i = 0 ; i < dockpars.num_of_genes; i += 1)
                 {
                     pMem_conformations_next[dOffset + i] = pMem_conformations_current[sOffset + i];
                 }
-            }
         }
         else
         {
@@ -122,13 +122,11 @@ void gpu_gen_and_eval_newpops(
             // [4..5] for binary tournaments, [6] for deciding crossover,
             // [7..8] for crossover points, [9] for local search
             #pragma omp parallel for
-            for (uint32_t j = 0; j < work_pteam; j++){
-                for (uint32_t gene_counter = j;
+                for (uint32_t gene_counter = 0;
                      gene_counter < 10;
-                     gene_counter += work_pteam) {
-                     randnums[gene_counter] = gpu_randf(cData.pMem_prng_states, idx, j);
+                     gene_counter += 1) {
+                     randnums[gene_counter] = gpu_randf(cData.pMem_prng_states, idx, gene_counter);
                 }
-            }
 #if 0
         //if ((j == 0) && (idx == 1))
         {
@@ -195,10 +193,9 @@ void gpu_gen_and_eval_newpops(
 
     //--- thread barrier
                 #pragma omp parallel for
-                for (uint32_t j = 0; j < work_pteam; j++){
-                     for (uint32_t gene_counter = j;
+                     for (uint32_t gene_counter = 0;
                      gene_counter < dockpars.num_of_genes;
-                     gene_counter+= work_pteam)
+                     gene_counter+= 1)
                 {
                     // Two-point crossover
                     if (covr_point[0] != covr_point[1])
@@ -217,18 +214,15 @@ void gpu_gen_and_eval_newpops(
                             offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*dockpars.pop_size+parents[1])*GENOTYPE_LENGTH_IN_GLOBMEM+gene_counter];
                     }
                 }
-                }
             }
             else	//no crossover
             {
                 #pragma omp parallel for
-                for (int j = 0; j < work_pteam; j++){
-                for (uint32_t gene_counter = j;
+                for (uint32_t gene_counter = 0;
                      gene_counter < dockpars.num_of_genes;
-                     gene_counter+= work_pteam)
+                     gene_counter+= 1)
                 {
                     offspring_genotype[gene_counter] = pMem_conformations_current[(run_id*dockpars.pop_size+parents[0])*GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter];
-                }
                 }
             } // End of crossover
 
@@ -236,27 +230,25 @@ void gpu_gen_and_eval_newpops(
 
             // Performing mutation
             #pragma omp parallel for
-            for (int j = 0; j < work_pteam; j++){
-            for (uint32_t gene_counter = j;
+            for (uint32_t gene_counter = 0;
                  gene_counter < dockpars.num_of_genes;
-                 gene_counter+= work_pteam)
+                 gene_counter+= 1)
             {
                 // Notice: dockpars_mutation_rate was scaled down to [0,1] in host
                 // to reduce number of operations in device
-                if (/*100.0f**/gpu_randf(cData.pMem_prng_states, idx, j) < dockpars.mutation_rate)
+                if (/*100.0f**/gpu_randf(cData.pMem_prng_states, idx, gene_counter) < dockpars.mutation_rate)
                 {
                     // Translation genes
                     if (gene_counter < 3) {
-                        offspring_genotype[gene_counter] += dockpars.abs_max_dmov*(2*gpu_randf(cData.pMem_prng_states, idx, j)-1);
+                        offspring_genotype[gene_counter] += dockpars.abs_max_dmov*(2*gpu_randf(cData.pMem_prng_states, idx, gene_counter)-1);
                     }
                     // Orientation and torsion genes
                     else {
-                        offspring_genotype[gene_counter] += dockpars.abs_max_dang*(2*gpu_randf(cData.pMem_prng_states, idx, j)-1);
+                        offspring_genotype[gene_counter] += dockpars.abs_max_dang*(2*gpu_randf(cData.pMem_prng_states, idx, gene_counter)-1);
                         map_angle(offspring_genotype[gene_counter]);
                     }
 
                 }
-            }
             } // End of mutation
 
 		// Calculating energy of new offspring
@@ -295,10 +287,10 @@ void gpu_gen_and_eval_newpops(
                    //__threadfence();
                    //__syncthreads();
 
-		    int num_of_rotcyc = dockpars.rotbondlist_length/work_pteam;
+		    int num_of_rotcyc = dockpars.rotbondlist_length/GENOTYPE_LENGTH_IN_GLOBMEM;
         	    for(int rot=0; rot < num_of_rotcyc; rot++){
-            		int start = rot*work_pteam;
-            		int end = start +work_pteam;
+            		int start = rot*GENOTYPE_LENGTH_IN_GLOBMEM;
+            		int end = start +GENOTYPE_LENGTH_IN_GLOBMEM;
             		if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
             		#pragma omp parallel for
             		for (int rotation_counter  = start;
@@ -338,13 +330,11 @@ void gpu_gen_and_eval_newpops(
 
             // Copying new offspring to next generation
             #pragma omp parallel for
-            for (int j = 0; j < work_pteam; j++){
-            for (uint32_t gene_counter = j;
+            for (uint32_t gene_counter = 0;
                  gene_counter < dockpars.num_of_genes;
-                 gene_counter+= work_pteam)
+                 gene_counter+= 1)
             {
                 pMem_conformations_next[idx * GENOTYPE_LENGTH_IN_GLOBMEM + gene_counter] = offspring_genotype[gene_counter];
-            }
             }
         }
 

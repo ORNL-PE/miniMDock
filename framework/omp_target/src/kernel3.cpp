@@ -27,7 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "auxiliary_genetic.cpp"
 #include "calcenergy.cpp"
 #include "kernels.hpp"
-
+#include "omp.h"
 // if defined, new (experimental) SW genotype moves that are dependent
 // on nr of atoms and nr of torsions of ligand are used
 #define SWAT3  // Third set of Solis-Wets hyperparameters by Andreas Tillack
@@ -51,7 +51,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 	// FIXME : thread_limit(NUMOF_THREADS_PER_BLOCK)  generates wrong results
 	//#pragma omp target teams distribute 
 	#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)\
-	     num_teams(pops_by_runs) 
+	     num_teams(pops_by_runs)
 	for (uint32_t idx = 0; idx < pops_by_runs; idx++) {  // for teams
 
 		float genotype_candidate[ACTUAL_GENOTYPE_LENGTH];
@@ -140,16 +140,16 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			#pragma omp parallel for default(none) \
 					shared(cData, genotype_deviate,offspring_genotype,  \
 					dockpars, genotype_candidate, calc_coords,genotype_bias ) \
-					firstprivate(idx, gene_scale, work_pteam, num_of_genes, run_id ,\
+					firstprivate(idx, gene_scale, num_of_genes, run_id ,\
 					lig_scale, rho)
-			for (uint32_t j = 0; j < work_pteam; j++) {
+			//for (uint32_t j = 0; j < work_pteam; j++) {
 				// New random deviate
-				for (int gene_counter = j; gene_counter < num_of_genes;
-					gene_counter += work_pteam) {
+				for (int gene_counter = 0; gene_counter < num_of_genes;
+					gene_counter += 1) {
 				#ifdef SWAT3
 					genotype_deviate[gene_counter] =
-						rho * (2 * gpu_randf(cData.pMem_prng_states, idx, j) - 1) *
-						(gpu_randf(cData.pMem_prng_states, idx, j) < gene_scale);
+						rho * (2 * gpu_randf(cData.pMem_prng_states, idx, gene_counter) - 1) *
+						(gpu_randf(cData.pMem_prng_states, idx, gene_counter) < gene_scale);
 
 					// Translation genes
 					if (gene_counter < 3) {
@@ -168,8 +168,8 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 					}
 				#else
 					genotype_deviate[gene_counter] =
-						rho * (2 * gpu_randf(cData.pMem_prng_states, idx, j) - 1) *
-						(gpu_randf(cData.pMem_prng_states, idx, j) < 0.3f);
+						rho * (2 * gpu_randf(cData.pMem_prng_states, idx, gene_counter) - 1) *
+						(gpu_randf(cData.pMem_prng_states, idx, gene_counter) < 0.3f);
 
 					// Translation genes
 					if (gene_counter < 3) {
@@ -180,16 +180,16 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 						genotype_deviate[gene_counter] *= dockpars.base_dang_mul_sqrt3;
 					}
 					#endif
-				}
+				//}
 
 				// Generating new genotype candidate
-				for (int gene_counter = j; gene_counter < num_of_genes;
-					gene_counter += work_pteam) {
+			//	for (int gene_counter = j; gene_counter < num_of_genes;
+			//		gene_counter += work_pteam) {
 					genotype_candidate[gene_counter] = offspring_genotype[gene_counter] +
 						genotype_deviate[gene_counter] +
 						genotype_bias[gene_counter];
 				}
-			}
+			//}
 				// Evaluating candidate
 				//--- thread barrier
 
@@ -224,10 +224,10 @@ void gpu_perform_LS(uint32_t pops_by_runs,
         			//__threadfence();
         			//__syncthreads();
 			
-			        int num_of_rotcyc = dockpars.rotbondlist_length/work_pteam;
+			        int num_of_rotcyc = dockpars.rotbondlist_length/GENOTYPE_LENGTH_IN_GLOBMEM;
         			for(int rot=0; rot < num_of_rotcyc; rot++){
-            				int start = rot*work_pteam;
-            				int end = start +work_pteam;
+            				int start = rot*GENOTYPE_LENGTH_IN_GLOBMEM;
+            				int end = start +GENOTYPE_LENGTH_IN_GLOBMEM;
             				if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
             				#pragma omp parallel for  
             				for (int rotation_counter  = start;
@@ -330,10 +330,10 @@ void gpu_perform_LS(uint32_t pops_by_runs,
                                 //__threadfence();
                                 //__syncthreads();
 				
-		                int num_of_rotcyc = dockpars.rotbondlist_length/work_pteam;
+		                int num_of_rotcyc = dockpars.rotbondlist_length/GENOTYPE_LENGTH_IN_GLOBMEM;
                                 for(int rot=0; rot < num_of_rotcyc; rot++){
-                                        int start = rot*work_pteam;
-                                        int end = start +work_pteam;
+                                        int start = rot*GENOTYPE_LENGTH_IN_GLOBMEM;
+                                        int end = start +GENOTYPE_LENGTH_IN_GLOBMEM;
                                         if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
                                         #pragma omp parallel for
                                         for (int rotation_counter  = start;

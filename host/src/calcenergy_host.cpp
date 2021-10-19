@@ -566,7 +566,8 @@ int gen_rotlist(Liganddata* myligand, int rotlist[MAX_NUM_OF_ROTATIONS])
 	myligand->num_of_rotations_required = 0;
 
 
-	for (atom_id=0; atom_id<NUM_OF_THREADS_PER_BLOCK; atom_id++)	//handling special case when num_of_atoms<NUM_OF_THREADS_PER_BLOCK
+	for (atom_id=0; atom_id<GENOTYPE_LENGTH_IN_GLOBMEM; atom_id++)	//handling special case when num_of_atoms<NUM_OF_THREADS_PER_BLOCK
+	//for (atom_id=0; atom_id<NUM_OF_THREADS_PER_BLOCK; atom_id++)	//handling special case when num_of_atoms<NUM_OF_THREADS_PER_BLOCK
 		number_of_req_rotations[atom_id] = 0;
 
 	for (atom_id=0; atom_id<myligand->num_of_atoms; atom_id++)
@@ -592,7 +593,8 @@ int gen_rotlist(Liganddata* myligand, int rotlist[MAX_NUM_OF_ROTATIONS])
 			return 1;
 
 		//putting the NUM_OF_THREADS_PER_BLOCK pieces of most important rotations to the list
-		for (parallel_rot_id=0; parallel_rot_id<NUM_OF_THREADS_PER_BLOCK; parallel_rot_id++)
+		for (parallel_rot_id=0; parallel_rot_id<GENOTYPE_LENGTH_IN_GLOBMEM; parallel_rot_id++)
+		//for (parallel_rot_id=0; parallel_rot_id<NUM_OF_THREADS_PER_BLOCK; parallel_rot_id++)
 		{
 			if (number_of_req_rotations[parallel_rot_id] == 0)	//if the atom has not to be rotated anymore, dummy rotation
 				new_rotlist_element = RLIST_DUMMY_MASK;
