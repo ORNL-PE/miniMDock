@@ -2,7 +2,7 @@
 
 
  module load cuda
- module load nvhpc/21.7
+ module load nvhpc/21.9
 
  #export GPU_PATH=${OLCF_CUDA_ROOT}
 
@@ -11,5 +11,5 @@
 
  #module load xl/16.1.1-10
 
- make API=OMPT COMPILER=nvhpc
+ make API=OMPT COMPILER=nvhpc NUMWI=128
 
