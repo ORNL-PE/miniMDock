@@ -391,7 +391,9 @@ filled with clock() */
     size_floatgrids = 4 * (mygrid->num_of_atypes+2) * (mygrid->size_xyz[0]) * (mygrid->size_xyz[1]) * (mygrid->size_xyz[2]);    
    
     cData.pMem_fgrids = (float*) calloc( size_floatgrids, sizeof(*cData.pMem_fgrids) );
+    //#pragma omp requires unified_shared_memory
     cData.pMem_gpu_evals_of_runs = (int*) calloc( size_evals_of_runs, sizeof(*cData.pMem_gpu_evals_of_runs));
+
     cData.pMem_prng_states = (unsigned int *) calloc(size_prng_seeds, sizeof(*cData.pMem_prng_states));   
  
     // Upload data
@@ -418,7 +420,7 @@ filled with clock() */
    
     //#pragma omp target enter data map(to: cData.pMem_gpu_evals_of_runs)
     #pragma omp target enter data map(to: cData.pMem_gpu_evals_of_runs[:size_evals_of_runs])
-
+     
     //#pragma omp target enter data map(to: cData.pMem_prng_states)
     #pragma omp target enter data map(to: cData.pMem_prng_states[:size_prng_seeds])
     
@@ -447,8 +449,8 @@ filled with clock() */
         dockpars.gridsize_x_times_y           = dockpars.gridsize_x * dockpars.gridsize_y; 
         dockpars.gridsize_x_times_y_times_z   = dockpars.gridsize_x * dockpars.gridsize_y * dockpars.gridsize_z;     
 	dockpars.grid_spacing                 = ((float) mygrid->spacing);
-	dockpars.rotbondlist_length           = ((int) GENOTYPE_LENGTH_IN_GLOBMEM*(myligand_reference.num_of_rotcyc));
-	//dockpars.rotbondlist_length           = ((int) NUM_OF_THREADS_PER_BLOCK*(myligand_reference.num_of_rotcyc));
+	//dockpars.rotbondlist_length           = ((int) GENOTYPE_LENGTH_IN_GLOBMEM*(myligand_reference.num_of_rotcyc));
+	dockpars.rotbondlist_length           = ((int) NUM_OF_THREADS_PER_BLOCK*(myligand_reference.num_of_rotcyc));
 	dockpars.coeff_elec                   = ((float) mypars->coeffs.scaled_AD4_coeff_elec);
 	dockpars.coeff_desolv                 = ((float) mypars->coeffs.AD4_coeff_desolv);
 	dockpars.pop_size                     = mypars->pop_size;

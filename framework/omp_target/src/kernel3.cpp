@@ -50,7 +50,8 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 {
 	// FIXME : thread_limit(NUMOF_THREADS_PER_BLOCK)  generates wrong results
 	//#pragma omp target teams distribute 
-	#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)\
+	//#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)
+	#pragma omp target teams distribute\
 	     num_teams(pops_by_runs)
 	for (uint32_t idx = 0; idx < pops_by_runs; idx++) {  // for teams
 
@@ -120,7 +121,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 		//--- thread barrier
 		#pragma omp parallel for default(none) \
 			shared(offspring_genotype,  genotype_bias, pMem_conformations_next) \
-			firstprivate(num_of_genes, offset)
+			firstprivate(num_of_genes, offset) //num_threads(num_of_genes)
 		for (int gene_counter = 0; gene_counter < num_of_genes;
 			gene_counter += 1) {
 			offspring_genotype[gene_counter] =
@@ -141,7 +142,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 					shared(cData, genotype_deviate,offspring_genotype,  \
 					dockpars, genotype_candidate, calc_coords,genotype_bias ) \
 					firstprivate(idx, gene_scale, num_of_genes, run_id ,\
-					lig_scale, rho)
+					lig_scale, rho) //num_threads(num_of_genes)
 			//for (uint32_t j = 0; j < work_pteam; j++) {
 				// New random deviate
 				for (int gene_counter = 0; gene_counter < num_of_genes;
@@ -195,7 +196,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 
 			        //======================= Calculating Energy ===============//
 			        candidate_energy = 0.0f;
-        			#pragma omp parallel for
+        			#pragma omp parallel for //num_threads(dockpars.num_of_atoms)
         			for (int atom_id = 0;
                   			atom_id < dockpars.num_of_atoms;
                   			atom_id+= 1) {
@@ -224,12 +225,12 @@ void gpu_perform_LS(uint32_t pops_by_runs,
         			//__threadfence();
         			//__syncthreads();
 			
-			        int num_of_rotcyc = dockpars.rotbondlist_length/ACTUAL_GENOTYPE_LENGTH;
+			        int num_of_rotcyc = dockpars.rotbondlist_length/work_pteam;
         			for(int rot=0; rot < num_of_rotcyc; rot++){
-            				int start = rot*ACTUAL_GENOTYPE_LENGTH;
-            				int end = start +ACTUAL_GENOTYPE_LENGTH;
+            				int start = rot*work_pteam;
+            				int end = start +work_pteam;
             				if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
-            				#pragma omp parallel for  
+            				#pragma omp parallel for num_threads(work_pteam)
             				for (int rotation_counter  = start;
                  				rotation_counter  < end;
                  				rotation_counter++){
@@ -238,7 +239,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
         			} // End rotation_counter for-loop	
 
 			        //float inter_energy = 0.0f;
-                    		#pragma omp parallel for reduction(+:candidate_energy)
+                    		#pragma omp parallel for reduction(+:candidate_energy) num_threads(dockpars.num_of_atoms)
                     		for (int atom_id = 0;
                               		atom_id < dockpars.num_of_atoms;
                               		atom_id+= 1){
@@ -247,7 +248,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 
                        	 	//printf("inter energy: %f \n", inter_energy);
                     		//float intra_energy = 0.0f;
-                    		#pragma omp parallel for reduction(+:candidate_energy)
+                    		#pragma omp parallel for reduction(+:candidate_energy) num_threads(dockpars.num_of_intraE_contributors)
                     		for (int contributor_counter = 0;
                          		contributor_counter < dockpars.num_of_intraE_contributors;
                          		contributor_counter += 1){
@@ -263,7 +264,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 			if (candidate_energy < offspring_energy) {  // If candidate is better, success
 				#pragma omp parallel for default(none) \
 					shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate) \
-					firstprivate(num_of_genes)
+					firstprivate(num_of_genes) //num_threads(num_of_genes)
 				for (int gene_counter = 0; gene_counter < num_of_genes;
 					gene_counter += 1) {
 					// Updating offspring_genotype
@@ -289,7 +290,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				// Generating the other genotype candidate
 				#pragma omp parallel for default(none) \
 					shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate) \
-					firstprivate(num_of_genes)
+					firstprivate(num_of_genes) //num_threads(num_of_genes)
 				for (int gene_counter = 0; gene_counter < num_of_genes;
 					gene_counter += 1) {
 					genotype_candidate[gene_counter] =
@@ -301,7 +302,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				//--- thread barrier
 			        //======================= Calculating Energy ===============//
 				candidate_energy = 0.0f;
-				#pragma omp parallel for
+				#pragma omp parallel for //num_threads(dockpars.num_of_atoms)
                                 for (int atom_id = 0;
                                         atom_id < dockpars.num_of_atoms;
                                         atom_id+= 1) {
@@ -330,12 +331,12 @@ void gpu_perform_LS(uint32_t pops_by_runs,
                                 //__threadfence();
                                 //__syncthreads();
 				
-		                int num_of_rotcyc = dockpars.rotbondlist_length/ACTUAL_GENOTYPE_LENGTH;
+		                int num_of_rotcyc = dockpars.rotbondlist_length/work_pteam;
                                 for(int rot=0; rot < num_of_rotcyc; rot++){
-                                        int start = rot*ACTUAL_GENOTYPE_LENGTH;
-                                        int end = start +ACTUAL_GENOTYPE_LENGTH;
+                                        int start = rot*work_pteam;
+                                        int end = start +work_pteam;
                                         if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
-                                        #pragma omp parallel for
+                                        #pragma omp parallel for num_threads(work_pteam)
                                         for (int rotation_counter  = start;
                                                 rotation_counter  < end;
                                                 rotation_counter++){
@@ -344,7 +345,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
                                 } // End rotation_counter for-loop
 
                                 //float inter_energy = 0.0f;
-                                #pragma omp parallel for reduction(+:candidate_energy)
+                                #pragma omp parallel for reduction(+:candidate_energy) num_threads(dockpars.num_of_atoms)
                                 for (int atom_id = 0;
                                         atom_id < dockpars.num_of_atoms;
                                         atom_id+= 1){
@@ -353,7 +354,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 
                                 //printf("inter energy: %f \n", inter_energy);
                                 //float intra_energy = 0.0f;
-                                #pragma omp parallel for reduction(+:candidate_energy)
+                                #pragma omp parallel for reduction(+:candidate_energy) num_threads(dockpars.num_of_intraE_contributors)
                                 for (int contributor_counter = 0;
                                         contributor_counter < dockpars.num_of_intraE_contributors;
                                         contributor_counter += 1){
@@ -378,7 +379,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				{
 					#pragma omp parallel for default(none) \
 					    firstprivate(num_of_genes) \
-						shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate)
+						shared(offspring_genotype, genotype_candidate, genotype_bias, genotype_deviate) //num_threads(num_of_genes)
 					for (int gene_counter = 0;
 						gene_counter < num_of_genes;
 						gene_counter += 1) {
@@ -405,7 +406,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 				}
 				else { // Failure in both directions
 					#pragma omp parallel for default(none) firstprivate(num_of_genes) \
-					    shared( genotype_bias)
+					    shared( genotype_bias) //num_threads(num_of_genes)
 					for (int gene_counter = 0;
 						gene_counter < num_of_genes;
 						gene_counter += 1){
@@ -450,7 +451,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 //		offset =
 //			(run_id * dockpars.pop_size + entity_id) * GENOTYPE_LENGTH_IN_GLOBMEM;
 		#pragma omp parallel for default(none) firstprivate(offset, num_of_genes, pMem_conformations_next) \
-		        shared( offspring_genotype)
+		        shared( offspring_genotype) //num_threads(num_of_genes)
 		for (int gene_counter = 0; gene_counter < num_of_genes;
 			gene_counter += 1) {
 			if (gene_counter >= 3) {

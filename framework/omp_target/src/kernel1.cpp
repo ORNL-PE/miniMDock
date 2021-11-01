@@ -74,10 +74,10 @@ void gpu_calc_initpop(	uint32_t pops_by_runs,
         //__threadfence();
         //__syncthreads();
         
-	int num_of_rotcyc = dockpars.rotbondlist_length/GENOTYPE_LENGTH_IN_GLOBMEM;
+	int num_of_rotcyc = dockpars.rotbondlist_length/work_pteam;
         for(int rot=0; rot < num_of_rotcyc; rot++){
-            int start = rot*GENOTYPE_LENGTH_IN_GLOBMEM;
-	    int end = start +GENOTYPE_LENGTH_IN_GLOBMEM;
+            int start = rot*work_pteam;
+	    int end = start +work_pteam;
 	    if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length; 
             #pragma omp parallel for  
             for (int rotation_counter  = start;

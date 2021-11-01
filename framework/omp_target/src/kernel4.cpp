@@ -39,7 +39,8 @@ void gpu_gen_and_eval_newpops(
     GpuDockparameters dockpars
 )
 {
-    #pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)\
+    //#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)
+    #pragma omp target teams distribute\
     num_teams(pops_by_runs) 
     for (uint32_t idx = 0; idx < pops_by_runs; idx++)
     {
@@ -71,8 +72,8 @@ void gpu_gen_and_eval_newpops(
         int temp_covr_point;
         // In this case this compute-unit is responsible for elitist selection
         if ((idx % dockpars.pop_size) == 0) {
-            #pragma omp parallel for
-            for (uint32_t j = 0; j < NUM_OF_THREADS_PER_BLOCK; j++){
+            #pragma omp parallel for num_threads(work_pteam)
+            for (uint32_t j = 0; j < work_pteam; j++){
                 // Find and copy best member of population to position 0
                 if (j <dockpars.pop_size)
                 {
@@ -81,7 +82,7 @@ void gpu_gen_and_eval_newpops(
                 }
             
                 // Scan through population (we already picked up a work_pteam's worth above so skip)
-                for (int i = idx + NUM_OF_THREADS_PER_BLOCK + j; i < idx + dockpars.pop_size; i += NUM_OF_THREADS_PER_BLOCK)
+                for (int i = idx + work_pteam + j; i < idx + dockpars.pop_size; i += work_pteam)
                 {
                    float e = pMem_energies_current[i];
                    if (e < bestEnergy[j])
@@ -94,7 +95,7 @@ void gpu_gen_and_eval_newpops(
            
         //if (j == 0)
             {
-            for(uint32_t entity_counter = 1; entity_counter < NUM_OF_THREADS_PER_BLOCK; entity_counter++)
+            for(uint32_t entity_counter = 1; entity_counter < work_pteam; entity_counter++)
                 if ((bestEnergy[entity_counter] < bestEnergy[0]) && (entity_counter < dockpars.pop_size)){
                     bestEnergy[0] = bestEnergy[entity_counter];
                     bestID[0] = bestID[entity_counter];
@@ -109,7 +110,7 @@ void gpu_gen_and_eval_newpops(
             int dOffset = idx * GENOTYPE_LENGTH_IN_GLOBMEM;
             //int sOffset = bestID * GENOTYPE_LENGTH_IN_GLOBMEM;
             int sOffset = bestID[0] * GENOTYPE_LENGTH_IN_GLOBMEM;
-            #pragma omp parallel for
+            #pragma omp parallel for //num_threads(dockpars.num_of_genes)
                 for (int i = 0 ; i < dockpars.num_of_genes; i += 1)
                 {
                     pMem_conformations_next[dOffset + i] = pMem_conformations_current[sOffset + i];
@@ -121,7 +122,7 @@ void gpu_gen_and_eval_newpops(
             // [0..3] for parent candidates,
             // [4..5] for binary tournaments, [6] for deciding crossover,
             // [7..8] for crossover points, [9] for local search
-            #pragma omp parallel for
+            #pragma omp parallel for //num_threads(10)
                 for (uint32_t gene_counter = 0;
                      gene_counter < 10;
                      gene_counter += 1) {
@@ -139,14 +140,14 @@ void gpu_gen_and_eval_newpops(
             // Determining run ID
             run_id = idx / dockpars.pop_size;
 //--- thread barrier
-            #pragma omp parallel for
+            #pragma omp parallel for //num_threads(4)
             for (uint32_t j = 0; j < 4; j++){
                 	//it is not ensured that the four candidates will be different...
                 parent_candidates[j]  = (int) (dockpars.pop_size*randnums[j]); //using randnums[0..3]
                 candidate_energies[j] = pMem_energies_current[run_id*dockpars.pop_size+parent_candidates[j]];
             }
 //--- thread barrier
-            #pragma omp parallel for
+            #pragma omp parallel for //num_threads(2)
             for (uint32_t j = 0; j < 2; j++){
                     // Notice: dockpars_tournament_rate was scaled down to [0,1] in host
                     // to reduce number of operations in device
@@ -174,7 +175,7 @@ void gpu_gen_and_eval_newpops(
             // to reduce number of operations in device
             if (/*100.0f**/randnums[6] < dockpars.crossover_rate)	// Using randnums[6]
             {
-                #pragma omp parallel for
+                #pragma omp parallel for //num_threads(2)
                 for (uint32_t j = 0; j < 2; j++){
                         // Using randnum[7..8]
                         covr_point[j] = (int) ((dockpars.num_of_genes-1)*randnums[7+j]);
@@ -192,7 +193,7 @@ void gpu_gen_and_eval_newpops(
                 }
 
     //--- thread barrier
-                #pragma omp parallel for
+                #pragma omp parallel for //num_threads(dockpars.num_of_genes)
                      for (uint32_t gene_counter = 0;
                      gene_counter < dockpars.num_of_genes;
                      gene_counter+= 1)
@@ -217,7 +218,7 @@ void gpu_gen_and_eval_newpops(
             }
             else	//no crossover
             {
-                #pragma omp parallel for
+                #pragma omp parallel for //num_threads(dockpars.num_of_genes)
                 for (uint32_t gene_counter = 0;
                      gene_counter < dockpars.num_of_genes;
                      gene_counter+= 1)
@@ -229,7 +230,7 @@ void gpu_gen_and_eval_newpops(
 //--- thread barrier
 
             // Performing mutation
-            #pragma omp parallel for
+            #pragma omp parallel for //num_threads(dockpars.num_of_genes)
             for (uint32_t gene_counter = 0;
                  gene_counter < dockpars.num_of_genes;
                  gene_counter+= 1)
@@ -258,7 +259,7 @@ void gpu_gen_and_eval_newpops(
             {
                 //======================= Calculating Energy ===============//
 		   energy = 0.0f;
-                   #pragma omp parallel for
+                   #pragma omp parallel for num_threads(dockpars.num_of_atoms)
                    for (uint atom_id = 0;
                            atom_id < dockpars.num_of_atoms;
                            atom_id+= 1) {
@@ -287,12 +288,12 @@ void gpu_gen_and_eval_newpops(
                    //__threadfence();
                    //__syncthreads();
 
-		    int num_of_rotcyc = dockpars.rotbondlist_length/GENOTYPE_LENGTH_IN_GLOBMEM;
+		    int num_of_rotcyc = dockpars.rotbondlist_length/work_pteam;
         	    for(int rot=0; rot < num_of_rotcyc; rot++){
-            		int start = rot*GENOTYPE_LENGTH_IN_GLOBMEM;
-            		int end = start +GENOTYPE_LENGTH_IN_GLOBMEM;
+            		int start = rot*work_pteam;
+            		int end = start +work_pteam;
             		if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
-            		#pragma omp parallel for
+            		#pragma omp parallel for num_threads(work_pteam)
             		for (int rotation_counter  = start;
                  		rotation_counter  < end;
                  		rotation_counter++){
@@ -301,7 +302,7 @@ void gpu_gen_and_eval_newpops(
        	 	     } // End rotation_counter for-loop
 
           //         float inter_energy = 0.0f;
-                   #pragma omp parallel for reduction(+:energy)
+                   #pragma omp parallel for reduction(+:energy) num_threads(dockpars.num_of_atoms)
                    for (uint atom_id = 0;
                            atom_id < dockpars.num_of_atoms;
                            atom_id+= 1){
@@ -310,7 +311,7 @@ void gpu_gen_and_eval_newpops(
 
                    //printf("inter energy: %f \n", inter_energy);
                    //float intra_energy = 0.0f;
-                   #pragma omp parallel for reduction(+:energy)
+                   #pragma omp parallel for reduction(+:energy) num_threads(dockpars.num_of_intraE_contributors)
                    for (uint contributor_counter = 0;
                            contributor_counter < dockpars.num_of_intraE_contributors;
                            contributor_counter += 1){
@@ -329,7 +330,7 @@ void gpu_gen_and_eval_newpops(
             }
 
             // Copying new offspring to next generation
-            #pragma omp parallel for
+            #pragma omp parallel for //num_threads(dockpars.num_of_genes)
             for (uint32_t gene_counter = 0;
                  gene_counter < dockpars.num_of_genes;
                  gene_counter+= 1)
