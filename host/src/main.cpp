@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
 	                process_result(&(mygrid), floatgrids.data(), &(mypars), &(myligand_init), &(myxrayligand), &argc,argv, sim_state);
 	                resulting_time=seconds_since(resulting_timer);
 #ifdef USE_OMPT
-		//finish_gpu_from_docking(cData);
+		finish_gpu_from_docking(cData);
 #else
 		finish_gpu_from_docking(cData, tData);
 #endif

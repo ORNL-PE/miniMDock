@@ -229,10 +229,6 @@ void finish_gpu_from_docking(GpuData& cData)
     free(cData.pMem_rotbonds_const);
     free(cData.pMem_rotbonds_atoms_const);
     free(cData.pMem_num_rotating_atoms_per_rotbond_const);
-    free(cData.pMem_angle_const);
-    free(cData.pMem_dependence_on_theta_const);
-    free(cData.pMem_dependence_on_rotangle_const);
-    //free(cData);   
 
 }
 
