@@ -50,8 +50,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 {
 	// FIXME : thread_limit(NUMOF_THREADS_PER_BLOCK)  generates wrong results
 	//#pragma omp target teams distribute 
-	//#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)
-	#pragma omp target teams distribute\
+	#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)\
 	     num_teams(pops_by_runs)
 	for (uint32_t idx = 0; idx < pops_by_runs; idx++) {  // for teams
 
@@ -230,7 +229,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
             				int start = rot*work_pteam;
             				int end = start +work_pteam;
             				if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
-            				#pragma omp parallel for num_threads(work_pteam)
+            				#pragma omp parallel for //num_threads(work_pteam)
             				for (int rotation_counter  = start;
                  				rotation_counter  < end;
                  				rotation_counter++){
@@ -239,7 +238,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
         			} // End rotation_counter for-loop	
 
 			        //float inter_energy = 0.0f;
-                    		#pragma omp parallel for reduction(+:candidate_energy) num_threads(dockpars.num_of_atoms)
+                    		#pragma omp parallel for reduction(+:candidate_energy) //num_threads(dockpars.num_of_atoms)
                     		for (int atom_id = 0;
                               		atom_id < dockpars.num_of_atoms;
                               		atom_id+= 1){
@@ -248,7 +247,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 
                        	 	//printf("inter energy: %f \n", inter_energy);
                     		//float intra_energy = 0.0f;
-                    		#pragma omp parallel for reduction(+:candidate_energy) num_threads(dockpars.num_of_intraE_contributors)
+                    		#pragma omp parallel for reduction(+:candidate_energy) //num_threads(dockpars.num_of_intraE_contributors)
                     		for (int contributor_counter = 0;
                          		contributor_counter < dockpars.num_of_intraE_contributors;
                          		contributor_counter += 1){
@@ -336,7 +335,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
                                         int start = rot*work_pteam;
                                         int end = start +work_pteam;
                                         if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
-                                        #pragma omp parallel for num_threads(work_pteam)
+                                        #pragma omp parallel for //num_threads(work_pteam)
                                         for (int rotation_counter  = start;
                                                 rotation_counter  < end;
                                                 rotation_counter++){
@@ -345,7 +344,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
                                 } // End rotation_counter for-loop
 
                                 //float inter_energy = 0.0f;
-                                #pragma omp parallel for reduction(+:candidate_energy) num_threads(dockpars.num_of_atoms)
+                                #pragma omp parallel for reduction(+:candidate_energy) //num_threads(dockpars.num_of_atoms)
                                 for (int atom_id = 0;
                                         atom_id < dockpars.num_of_atoms;
                                         atom_id+= 1){
@@ -354,7 +353,7 @@ void gpu_perform_LS(uint32_t pops_by_runs,
 
                                 //printf("inter energy: %f \n", inter_energy);
                                 //float intra_energy = 0.0f;
-                                #pragma omp parallel for reduction(+:candidate_energy) num_threads(dockpars.num_of_intraE_contributors)
+                                #pragma omp parallel for reduction(+:candidate_energy) //num_threads(dockpars.num_of_intraE_contributors)
                                 for (int contributor_counter = 0;
                                         contributor_counter < dockpars.num_of_intraE_contributors;
                                         contributor_counter += 1){
