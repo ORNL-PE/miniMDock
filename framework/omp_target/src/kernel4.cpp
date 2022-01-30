@@ -39,8 +39,8 @@ void gpu_gen_and_eval_newpops(
     GpuDockparameters dockpars
 )
 {
-    //#pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)
-    #pragma omp target teams distribute\
+    //#pragma omp target teams distribute
+    #pragma omp target teams distribute thread_limit(NUM_OF_THREADS_PER_BLOCK)\
     num_teams(pops_by_runs) 
     for (uint32_t idx = 0; idx < pops_by_runs; idx++)
     {
@@ -72,7 +72,7 @@ void gpu_gen_and_eval_newpops(
         int temp_covr_point;
         // In this case this compute-unit is responsible for elitist selection
         if ((idx % dockpars.pop_size) == 0) {
-            #pragma omp parallel for num_threads(work_pteam)
+            #pragma omp parallel for //num_threads(work_pteam)
             for (uint32_t j = 0; j < work_pteam; j++){
                 // Find and copy best member of population to position 0
                 if (j <dockpars.pop_size)
@@ -259,7 +259,7 @@ void gpu_gen_and_eval_newpops(
             {
                 //======================= Calculating Energy ===============//
 		   energy = 0.0f;
-                   #pragma omp parallel for num_threads(dockpars.num_of_atoms)
+                   #pragma omp parallel for //num_threads(dockpars.num_of_atoms)
                    for (uint atom_id = 0;
                            atom_id < dockpars.num_of_atoms;
                            atom_id+= 1) {
@@ -293,7 +293,7 @@ void gpu_gen_and_eval_newpops(
             		int start = rot*work_pteam;
             		int end = start +work_pteam;
             		if ( end > dockpars.rotbondlist_length ) end = dockpars.rotbondlist_length;
-            		#pragma omp parallel for num_threads(work_pteam)
+            		#pragma omp parallel for //num_threads(work_pteam)
             		for (int rotation_counter  = start;
                  		rotation_counter  < end;
                  		rotation_counter++){
@@ -302,7 +302,7 @@ void gpu_gen_and_eval_newpops(
        	 	     } // End rotation_counter for-loop
 
           //         float inter_energy = 0.0f;
-                   #pragma omp parallel for reduction(+:energy) num_threads(dockpars.num_of_atoms)
+                   #pragma omp parallel for reduction(+:energy) //num_threads(dockpars.num_of_atoms)
                    for (uint atom_id = 0;
                            atom_id < dockpars.num_of_atoms;
                            atom_id+= 1){
@@ -311,7 +311,7 @@ void gpu_gen_and_eval_newpops(
 
                    //printf("inter energy: %f \n", inter_energy);
                    //float intra_energy = 0.0f;
-                   #pragma omp parallel for reduction(+:energy) num_threads(dockpars.num_of_intraE_contributors)
+                   #pragma omp parallel for reduction(+:energy) //num_threads(dockpars.num_of_intraE_contributors)
                    for (uint contributor_counter = 0;
                            contributor_counter < dockpars.num_of_intraE_contributors;
                            contributor_counter += 1){
