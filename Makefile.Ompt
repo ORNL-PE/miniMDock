@@ -13,7 +13,7 @@ $(shell ./link_ompt.sh)
 #Using LLVM clang compiler
 ifeq ($(COMPILER), llvm)
       CPP=clang++ -Ofast -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda --cuda-path=$(GPU_PATH) -Xcuda-ptxas --maxrregcount=120
-##CPP=clang++ -Ofast -std=c++17 -fopenmp -lopmtarget -fopenmp-targets=nvptx64-nvidia-cuda --cuda-path=$(GPU_PATH)
+#      CPP=clang++ -Ofast -std=c++17 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda --cuda-path=$(GPU_PATH)
       COMP=llvm
 #Using IBM XL Compiler
 else ifeq ($(COMPILER), xl)
@@ -21,7 +21,8 @@ else ifeq ($(COMPILER), xl)
       COMP=xl
 #Using NVIDIA nvc++ compiler
 else ifeq ($(COMPILER), nvhpc)
-      CPP=nvc++ -std=c++17 -mp=gpu -fast -gpu=cc70
+ #    CPP=nvc++ -std=c++17 -mp=gpu -fast -gpu=cc70
+      CPP=nvc++ -std=c++17 -mp=gpu -fast -gpu=cc70 -gpu=maxrregcount:60
       COMP=nvhpc
 #Using gcc 
 else ifeq ($(COMPILER), gcc)
