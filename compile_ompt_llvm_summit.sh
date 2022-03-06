@@ -1,11 +1,12 @@
 #!/bin/bash
 
+ #LLVM 15 to use LTO features
  module use /sw/summit/modulefiles/ums/stf010/Core
- module load llvm/14.0.0-20211016 cuda
+ module load llvm/15.0.0-latest cuda/11.4.2
+
+ #LLVM 14
  #module load llvm/14.0.0-latest cuda
- #module load llvm/14.0.0-20210909 cuda
 
  export GPU_PATH=${OLCF_CUDA_ROOT}
 
- make API=OMPT COMPILER=llvm NUMWI=128
-
+ make API=OMPT COMPILER=llvm NUMWI=64
