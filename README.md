@@ -7,7 +7,8 @@ The miniapp is developed based on [AutoDock-GPU](https://github.com/ccsb-scripps
 
 * CUDA 
 * HIP 
-* Kokkos  
+* Kokkos
+* OpenMP Offload  
 
 ## Compilation 
 ### Compilation in General
@@ -76,6 +77,13 @@ Steps to build the CUDA, HIP, and Kokkos versions of miniMDock,
   export KOKKOS_INC_PATH=/home/users/coe0179/kokkos/include/ 
   export KOKKOS_LIB_PATH=/home/users/coe0179/kokkos/lib64/ 
   make API=KOKKOS DEVICE=GPU  CARD=AMD
+  ```
+#
+```diff 
++ OpenMP Offload version 
+```
+  * Prerequisites: OpenMP compiler and vendor specific API. LLVM Clang or NVHPC compiler and cuda for NVIDIA GPUs and LLVM Clang, ROCM, or CCE on AMD GPUs.
+  
   ```
 #
 ## Running
