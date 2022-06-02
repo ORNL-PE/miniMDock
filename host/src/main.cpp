@@ -126,12 +126,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 	}
-#ifdef USE_OMPT
-        cData.devnum = 0;
-	setup_gpu_for_docking(cData);
-#else
-	setup_gpu_for_docking(cData, tData);
-#endif
+
 
 #endif
 
@@ -157,6 +152,14 @@ int main(int argc, char* argv[])
 				// Copy preloaded maps to GPU
 				setup_time=seconds_since(setup_timer);
 			}
+#ifndef USE_KOKKOS
+#ifdef USE_OMPT
+        cData.devnum = 0;
+	setup_gpu_for_docking(cData);
+#else
+	setup_gpu_for_docking(cData, tData, mypars);
+#endif
+#endif
 
 			// Starting Docking
 	        unsigned int repeats = mypars.num_of_docks;

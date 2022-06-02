@@ -68,7 +68,7 @@ void copy_map_to_gpu(	GpuTempData& tData,
 			int size_of_one_map);
 
 void setup_gpu_for_docking(GpuData& cData, 
-                           GpuTempData& tData);
+                           GpuTempData& tData, Dockpars& mypars);
 void finish_gpu_from_docking(GpuData& cData, 
                              GpuTempData& tData);
 int docking_with_gpu(const Gridinfo* 		mygrid,
