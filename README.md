@@ -112,6 +112,20 @@ Steps to build the CUDA, HIP, and Kokkos versions of miniMDock,
 -lfile ./input/7cpa/7cpa_ligand.pdbqt  \ 
 -nrun 10 
 ``` 
+
+### 3 Testcases 
+
+* Choose receptor file name at the file host/src/getparameters.cpp, in lines 97 -99.
+* Pass the appropriate ligand file name when running
+```zsh 
+| Size   | fldfile                     | lfile       |
+|:-------------:|:-------------------------:|
+| Medium    | ./input/7cpa/7cpa_protein.maps.fld       |  ./input/7cpa/7cpa_ligand.pdbqt |
+| Large    | ./input/3er5/protein.maps.fld              |	 ./input/3er5/rand-1.pdbqt |
+| Small    | ./input/nsc1620/protein.maps.fld              | ./input/nsc1620/NSC1620.pdbqt |
+``` 
+
+
 ## References 
 miniMDock development, discussion, and benchmark have been published in 2020 IEEE/ACM International Workshop on P3HPC. Please cite these references if you use miniMDock in your research: <br/>
 <a id="1">[1]</a> M. Thavappiragasam, A. Scheinberg, W. Elwasif, O. Hernandez and A. Sedova, "Performance Portability of Molecular Docking Miniapp On Leadership Computing Platforms," 2020 IEEE/ACM International Workshop on Performance, Portability and Productivity in HPC (P3HPC), GA, USA, 2020, pp. 36-44, doi: 10.1109/P3HPC51967.2020.00009.
