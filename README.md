@@ -83,8 +83,7 @@ Steps to build the CUDA, HIP, and Kokkos versions of miniMDock,
 + OpenMP Offload version 
 ```
   * Prerequisites: OpenMP compiler and vendor specific API. LLVM Clang or NVHPC compiler and cuda for NVIDIA GPUs and LLVM Clang, or CCE and ROCM on AMD GPUs.  
-  ```
-   ```zsh
+  ```zsh
   * Building on Summit using OpenMP LLVM CLang compiler
   module use /sw/summit/modulefiles/ums/stf010/Core
   module load llvm/15.0.0-latest cuda/11.4.2
