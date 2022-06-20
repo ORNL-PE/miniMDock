@@ -117,13 +117,13 @@ Steps to build the CUDA, HIP, and Kokkos versions of miniMDock,
 
 * Choose receptor file name at the file host/src/getparameters.cpp, in lines 97 -99.
 * Pass the appropriate ligand file name when running
-```zsh 
+
 | Size   | fldfile                     | lfile       |
 |:-------------:|:-------------------------:|
 | Medium    | ./input/7cpa/7cpa_protein.maps.fld       |  ./input/7cpa/7cpa_ligand.pdbqt |
 | Large    | ./input/3er5/protein.maps.fld              |	 ./input/3er5/rand-1.pdbqt |
 | Small    | ./input/nsc1620/protein.maps.fld              | ./input/nsc1620/NSC1620.pdbqt |
-``` 
+
 
 
 ## References 
