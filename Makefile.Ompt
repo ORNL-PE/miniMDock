@@ -39,6 +39,11 @@ else ifeq ($(COMPILER), ROCM)
 else ifeq ($(COMPILER), AOMP)
       CPP=clang++  -fopenmp -target x86_64-pc-linux-gnu -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
       COMP=aomp
+else ifeq ($(COMPILER), icpc)
+      #CPP=icpc -std=c++14 -O3 -Wall -qnextgen -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
+      CPP=icpx -std=c++14 -O3 -Wall -qnextgen -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
+      #CPP=icpx -std=c++14 -O3 -Wall -qopenmp-simd  -unroll0 -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
+      COMP=icpc
 endif
 
 # ------------------------------------------------------
