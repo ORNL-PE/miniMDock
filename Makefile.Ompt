@@ -41,6 +41,8 @@ else ifeq ($(COMPILER), AOMP)
       COMP=aomp
 else ifeq ($(COMPILER), icpc)
       #CPP=icpc -std=c++14 -O3 -Wall -qnextgen -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
+      #CPP=icpx -std=c++14 -O3 -Wall -qnextgen -fiopenmp -fopenmp-targets=spir64 -Xopenmp-target-backend="-internal_options -ze-opt-large-register-file" -D__STRICT_ANSI__
+      # arcticus
       CPP=icpx -std=c++14 -O3 -Wall -qnextgen -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
       #CPP=icpx -std=c++14 -O3 -Wall -qopenmp-simd  -unroll0 -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
       COMP=icpc
@@ -100,6 +102,9 @@ else ifeq ($(NUMWI), 128)
 else ifeq ($(NUMWI), 256)
                 NWI=-DN256WI
                 TARGET:=$(TARGET)_256wi
+else ifeq ($(NUMWI), 512)
+                NWI=-DN512WI
+                TARGET:=$(TARGET)_512wi
 else
         ifeq ($(DEVICE), CPU)
                 NWI=-DN16WI
