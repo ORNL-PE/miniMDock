@@ -43,7 +43,11 @@ else ifeq ($(COMPILER), icpc)
       #CPP=icpc -std=c++14 -O3 -Wall -qnextgen -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
       #CPP=icpx -std=c++14 -O3 -Wall -qnextgen -fiopenmp -fopenmp-targets=spir64 -Xopenmp-target-backend="-internal_options -ze-opt-large-register-file" -D__STRICT_ANSI__
       # arcticus
-      CPP=icpx -std=c++14 -O3 -Wall -qnextgen -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
+      CPP=icpx -std=c++14 -O3 -Wall -qnextgen  -fiopenmp -fopenmp-targets=spir64_gen -Xopenmp-target-backend "-device 12.60.7 -options -ze-opt-large-register-file" # -D__STRICT_ANSI__
+      #CPP=icpx -std=c++14 -O3 -Wall -qnextgen  -fiopenmp -fopenmp-targets=spir64_gen -Xopenmp-target-backend "-device 12.60.7 -options ze-intel-enable-auto-large-GRF-mode" # -D__STRICT_ANSI__
+      #CPP=icpx -std=c++14 -O3 -Wall -qnextgen -fiopenmp -fopenmp-targets=spir64 #-D__STRICT_ANSI__
+      # Set large GRF for JIT compilation
+      #LIBOMPTARGET_LEVEL0_COMPILATION_OPTIONS="-ze-opt-large-register-file"  
       #CPP=icpx -std=c++14 -O3 -Wall -qopenmp-simd  -unroll0 -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
       COMP=icpc
 endif
