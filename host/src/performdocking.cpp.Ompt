@@ -150,7 +150,7 @@ void setup_gpu_for_docking(GpuData& cData)
     // Initialize CUDA
     int device                                      = -1;
     const int gpuCount                                    = omp_get_num_devices();
-    if (gpuCount == 0)
+ /*   if (gpuCount == 0)
     {
         printf("No GPU devices found, exiting.\n");
         exit(-1);
@@ -164,7 +164,7 @@ void setup_gpu_for_docking(GpuData& cData)
 	printf("Error: Requested device %i is worng, device number should be >= 0", cData.devnum);
 	exit(-1);
     }
-    
+   */ 
     //#pragma omp target device(0)
     //#pragma omp target device(cData.devnum)
     //printf("Using the accelerator GPU_%d", cData.devnum);

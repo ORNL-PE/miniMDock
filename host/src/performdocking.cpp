@@ -1,1 +1,1 @@
-performdocking.cpp.Ompt
+performdocking.cpp.Cuda

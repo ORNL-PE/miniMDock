@@ -74,13 +74,10 @@ __device__ inline int64_t ullitolli(uint64_t u)
     __syncthreads(); \
     if (__any(value != 0)) \
     { \
-        uint32_t tgx            = hipThreadIdx_x & cData.warpmask; \
-        value                  += __shfl( value, tgx ^ 1); \
-        value                  += __shfl( value, tgx ^ 2); \
-        value                  += __shfl( value, tgx ^ 4); \
-        value                  += __shfl( value, tgx ^ 8); \
-        value                  += __shfl( value, tgx ^ 16); \
-        value                  += __shfl( value, tgx ^ 32); \
+	unsigned int mask = cData.warpmask;\
+        uint32_t tgx = hipThreadIdx_x & mask; \
+	for (int i=1 i<mask; i*=2)\
+            value += __shfl( value, tgx ^ i); \
         if (tgx == 0) \
         { \
             atomicAdd(pAccumulator, value); \
@@ -121,13 +118,10 @@ __device__ inline int64_t ullitolli(uint64_t u)
     __syncthreads(); \
     if (__any(value != 0.0f)) \
     { \
-        uint32_t tgx            = hipThreadIdx_x & cData.warpmask; \
-        value                  += __shfl( value, tgx ^ 1); \
-        value                  += __shfl( value, tgx ^ 2); \
-        value                  += __shfl( value, tgx ^ 4); \
-        value                  += __shfl( value, tgx ^ 8); \
-        value                  += __shfl( value, tgx ^ 16); \
-        value                  += __shfl( value, tgx ^ 32); \
+	unsigned int mask = cData.warpmask;\
+        uint32_t tgx  = hipThreadIdx_x & mask; \
+	for (int i=1 i<mask; i*=2)\
+            value += __shfl( value, tgx ^ i); \
         if (tgx == 0) \
         { \
             atomicAdd(pAccumulator, value); \

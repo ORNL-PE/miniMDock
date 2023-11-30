@@ -72,6 +72,30 @@ __device__ inline int64_t ullitolli(uint64_t u)
     __syncthreads(); \
     if (__any_sync(0xffffffff, value != 0)) \
     { \
+        unsigned int mask = cData.warpmask; \
+        uint32_t tgx = threadIdx.x & mask; \
+	for (int i=1; i<mask; i*=2) \
+	    value += __shfl_sync(0xffffffff, value, tgx ^ i); \
+        if (tgx == 0) \
+        { \
+            atomicAdd(pAccumulator, value); \
+        } \
+    } \
+    __threadfence(); \
+    __syncthreads(); \
+    value = *pAccumulator; \
+    __syncthreads();
+
+/* ---
+#define REDUCEINTEGERSUM(value, pAccumulator) \
+    if (threadIdx.x == 0) \
+    { \
+        *pAccumulator = 0; \
+    } \
+    __threadfence(); \
+    __syncthreads(); \
+    if (__any_sync(0xffffffff, value != 0)) \
+    { \
         uint32_t tgx            = threadIdx.x & cData.warpmask; \
         value                  += __shfl_sync(0xffffffff, value, tgx ^ 1); \
         value                  += __shfl_sync(0xffffffff, value, tgx ^ 2); \
@@ -87,7 +111,7 @@ __device__ inline int64_t ullitolli(uint64_t u)
     __syncthreads(); \
     value = *pAccumulator; \
     __syncthreads();
-
+*/
 
 #define ATOMICADDF32(pAccumulator, value) atomicAdd(pAccumulator, (value))
 #define ATOMICSUBF32(pAccumulator, value) atomicAdd(pAccumulator, -(value))
@@ -118,6 +142,30 @@ __device__ inline int64_t ullitolli(uint64_t u)
     __syncthreads(); \
     if (__any_sync(0xffffffff, value != 0.0f)) \
     { \
+        unsigned int mask = cData.warpmask; \
+        uint32_t tgx = threadIdx.x & mask; \
+	for (int i=1; i<mask; i*=2) \
+           value += __shfl_sync(0xffffffff, value, tgx ^ i); \
+        if (tgx == 0) \
+        { \
+            atomicAdd(pAccumulator, value); \
+        } \
+    } \
+    __threadfence(); \
+    __syncthreads(); \
+    value = (float)(*pAccumulator); \
+    __syncthreads();
+
+/*
+#define REDUCEFLOATSUM(value, pAccumulator) \
+    if (threadIdx.x == 0) \
+    { \
+        *pAccumulator = 0; \
+    } \
+    __threadfence(); \
+    __syncthreads(); \
+    if (__any_sync(0xffffffff, value != 0.0f)) \
+    { \
         uint32_t tgx            = threadIdx.x & cData.warpmask; \
         value                  += __shfl_sync(0xffffffff, value, tgx ^ 1); \
         value                  += __shfl_sync(0xffffffff, value, tgx ^ 2); \
@@ -133,7 +181,7 @@ __device__ inline int64_t ullitolli(uint64_t u)
     __syncthreads(); \
     value = (float)(*pAccumulator); \
     __syncthreads();
-
+*/
 #endif
 
 
