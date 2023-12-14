@@ -57,11 +57,9 @@ __device__ inline int64_t ullitolli(uint64_t u)
     }
 
 #define WARPMINIMUM2(tgx, v0, k0) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 1) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 2) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 4) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 8) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 16)   
+    unsigned int mask = cData.warpmask;\
+    for (int i=1; i<mask; i*2)\
+        WARPMINIMUMEXCHANGE(tgx, v0, k0, i) 
 
 #define REDUCEINTEGERSUM(value, pAccumulator) \
     if (threadIdx.x == 0) \

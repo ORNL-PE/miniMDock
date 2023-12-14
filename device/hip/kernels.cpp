@@ -58,12 +58,9 @@ __device__ inline int64_t ullitolli(uint64_t u)
     }
 
 #define WARPMINIMUM2(tgx, v0, k0) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 1) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 2) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 4) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 8) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 16) \
-    WARPMINIMUMEXCHANGE(tgx, v0, k0, 32)   
+    unsigned int mask = cData.warpmask;\
+    for (int i=1; i<mask; i*2)\
+	WARPMINIMUMEXCHANGE(tgx, v0, k0, i) 
 
 #define REDUCEINTEGERSUM(value, pAccumulator) \
     if (hipThreadIdx_x == 0) \
@@ -76,7 +73,7 @@ __device__ inline int64_t ullitolli(uint64_t u)
     { \
 	unsigned int mask = cData.warpmask;\
         uint32_t tgx = hipThreadIdx_x & mask; \
-	for (int i=1 i<mask; i*=2)\
+	for (int i=1; i<mask; i*=2)\
             value += __shfl( value, tgx ^ i); \
         if (tgx == 0) \
         { \
@@ -120,7 +117,7 @@ __device__ inline int64_t ullitolli(uint64_t u)
     { \
 	unsigned int mask = cData.warpmask;\
         uint32_t tgx  = hipThreadIdx_x & mask; \
-	for (int i=1 i<mask; i*=2)\
+	for (int i=1; i<mask; i*=2)\
             value += __shfl( value, tgx ^ i); \
         if (tgx == 0) \
         { \

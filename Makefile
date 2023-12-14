@@ -40,6 +40,10 @@ ifeq ($(API),HIP)
   else
   ifeq ($(CARD), AMD)
    include Makefile.Hip.Amd
+  else
+  ifeq ($(CARD), INTEL)
+   include Makefile.Hip.Intel
+  endif 
   endif
   endif
 else
